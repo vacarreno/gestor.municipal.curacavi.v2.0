@@ -165,7 +165,7 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
     });
 
     // === TABLA ===
-    doc.moveDown(1);
+    doc.moveDown(10);
     doc.font("Helvetica-Bold").fillColor("#003366").text("Ítems Inspeccionados", L());
     doc.moveDown(0.5).fillColor("#000");
 
