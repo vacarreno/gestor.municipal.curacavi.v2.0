@@ -308,7 +308,7 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
 
     // === FIRMAS ===
 // Calcula la posición 1 cm (~28 puntos) bajo la última fila de la tabla
-const firmaOffset = 28; 
+const firmaOffset = 56; 
 const firmaY = y + firmaOffset;
 
 doc.font("Helvetica-Bold").fillColor("#000");
@@ -330,18 +330,6 @@ if (data.rut_conductor)
 
 doc.text("_____________________________", L() + 260, baseY);
 doc.text("Supervisor:", L() + 270, baseY + 12);
-
-// === PIE DE PÁGINA ===
-const footerY = doc.page.height - 40;
-doc
-  .fontSize(8)
-  .fillColor("#666")
-  .text(
-    "Municipalidad de Curacaví - Departamento de Transporte",
-    L(),
-    footerY,
-    { align: "center" }
-  );
 
     doc.end();
   } catch (err) {
