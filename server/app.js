@@ -14,10 +14,10 @@ const isProd = NODE_ENV === "production";
 // === DOMINIOS PERMITIDOS ===
 const allowedDomains = [
   process.env.LOCAL_CLIENT_APP,       // http://localhost:5173
-  process.env.REMOTE_CLIENT_APP,      // https://gestor-municipal-curacavi-frontend.onrender.com
+  process.env.REMOTE_CLIENT_APP,      // https://curacavi-frontend.onrender.com
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  "https://gestor-municipal-curacavi-frontend.onrender.com",
+  "https://curacavi-frontend.onrender.com",
 ].filter(Boolean);
 
 // === APP EXPRESS ===
