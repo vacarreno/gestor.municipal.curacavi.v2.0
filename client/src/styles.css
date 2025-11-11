@@ -1,0 +1,109 @@
+:root { --sidebar-w: 260px; }
+body { background:#f7f7f9; }
+
+/* Layout base */
+.app-shell { display:grid; grid-template-columns: var(--sidebar-w) 1fr; min-height:100vh; position:relative; }
+.header, .footer { background:#fff; border:1px solid #e9ecef; }
+.content { padding:1rem; }
+
+/* Sidebar */
+.sidebar { background:#0949a8; color:#fff; padding:1rem; overflow:auto; height:100vh; position:sticky; top:0; }
+.sidebar a { color:#fff; text-decoration:none; display:block; padding:.5rem .75rem; border-radius:.5rem; }
+.sidebar a.active, .sidebar a:hover { background: rgba(255,255,255,.15); }
+
+/* Hamburger */
+.hamburger {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1041;
+  display: none;              /* visible en mobile */
+  line-height: 1;
+}
+
+/* Backdrop para mobile */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  backdrop-filter: blur(1px);
+  z-index: 1040;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.backdrop.show { opacity: 1; pointer-events: auto; }
+
+/* Responsive: sidebar deslizable en pantallas chicas */
+@media (max-width: 992px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .hamburger { display: inline-block; }
+  .sidebar {
+    position: fixed;
+    top: 0; left: -100%;
+    width: var(--sidebar-w);
+    height: 100vh;
+    z-index: 1042;
+    transition: left .2s ease;
+  }
+  .sidebar.show { left: 0; }
+}
+
+/* Opcional: compactar contenido cuando el menú está abierto en mobile */
+@media (max-width: 992px) {
+  .app-shell.nav-open .content { /* placeholder por si deseas empujar contenido */ }
+}
+
+/* === LOGIN CENTRADO === */
+.login-bg {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #1E3A5F 0%, #1E3A5F 100%);
+  background-repeat: no-repeat;
+  background-size: cover;
+  padding: 1rem;
+}
+
+/* Tarjeta del login */
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  text-align: center;
+  transition: all 0.3s ease-in-out;
+}
+
+.login-card:hover {
+  transform: translateY(-3px);
+}
+
+/* Adaptación móvil */
+@media (max-width: 576px) {
+  .login-card {
+    padding: 1.5rem;
+  }
+}
+
+/* === LOGIN FULLSCREEN CENTRADO === */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #1E3A5F 0%, #1E3A5F 100%);
+}
+
+@media (max-width: 576px) {
+  table td,
+  table th {
+    font-size: 12px;
+    padding: 0.4rem;
+  }
+}
