@@ -307,27 +307,41 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
     }
 
     // === FIRMAS ===
-    doc.moveDown(1);
-    const ySign = doc.page.height - 100;
-    doc.font("Helvetica-Bold").fillColor("#000");
-    doc.text("_____________________________", L(), ySign);
-    doc.text(`Conductor: ${data.conductor}`, L() + 15, ySign + 12);
-    if (data.rut_conductor)
-      doc.text(`RUT: ${data.rut_conductor}`, L() + 15, ySign + 24);
-    doc.text("_____________________________", L() + 260, ySign);
-    doc.text("Supervisor:", L() + 270, ySign + 12);
+// Calcula la posición 1 cm (~28 puntos) bajo la última fila de la tabla
+const firmaOffset = 28; 
+const firmaY = y + firmaOffset;
 
-    // === PIE DE PÁGINA ===
-    const footerY = doc.page.height - 40;
-    doc
-      .fontSize(8)
-      .fillColor("#666")
-      .text(
-        "Municipalidad de Curacaví - Departamento de Transporte",
-        L(),
-        footerY,
-        { align: "center" }
-      );
+doc.font("Helvetica-Bold").fillColor("#000");
+
+// Si no hay espacio suficiente, agrega nueva página
+if (firmaY > doc.page.height - 120) {
+  doc.addPage();
+  drawHeader();
+  doc.moveDown(3);
+}
+
+// Posiciona las líneas de firmas
+const baseY = doc.y < firmaY ? firmaY : doc.y;
+
+doc.text("_____________________________", L(), baseY);
+doc.text(`Conductor: ${data.conductor}`, L() + 15, baseY + 12);
+if (data.rut_conductor)
+  doc.text(`RUT: ${data.rut_conductor}`, L() + 15, baseY + 24);
+
+doc.text("_____________________________", L() + 260, baseY);
+doc.text("Supervisor:", L() + 270, baseY + 12);
+
+// === PIE DE PÁGINA ===
+const footerY = doc.page.height - 40;
+doc
+  .fontSize(8)
+  .fillColor("#666")
+  .text(
+    "Municipalidad de Curacaví - Departamento de Transporte",
+    L(),
+    footerY,
+    { align: "center" }
+  );
 
     doc.end();
   } catch (err) {
