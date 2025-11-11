@@ -308,7 +308,7 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
 
     // === FIRMAS ===
     doc.moveDown(1);
-    const ySign = doc.page.height - 150;
+    const ySign = doc.page.height - 100;
     doc.font("Helvetica-Bold").fillColor("#000");
     doc.text("_____________________________", L(), ySign);
     doc.text(`Conductor: ${data.conductor}`, L() + 15, ySign + 12);
