@@ -82,7 +82,7 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
         });
 
       // marcador temporal (será reemplazado luego)
-      const currentPage = doc.pageNumber;
+      /*const currentPage = doc.pageNumber;
       doc
         .font("Helvetica")
         .fontSize(9)
@@ -93,7 +93,7 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
         });
 
       doc.moveDown(0.5);
-      doc.font("Helvetica").fillColor("#000").fontSize(10);
+      doc.font("Helvetica").fillColor("#000").fontSize(10);*/
     };
 
     drawHeader();
