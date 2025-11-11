@@ -92,6 +92,11 @@ app.use("/vehiculos", require("./routes/vehiculoRoutes"));
 app.use("/conductores", require("./routes/conductorRoutes"));
 app.use("/inspecciones", require("./routes/inspeccionRoutes"));
 app.use("/reportes", require("./routes/reportesRoutes"));
+app.use("/mantenciones", require("./routes/mantencionesRoutes"));
+app.use("/mantenciones/pdf", require("./routes/mantencionesPdfRoutes"));
+
+
+
 
 // === HEALTHCHECK ===
 app.get("/", (_, res) => {
