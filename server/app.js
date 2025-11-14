@@ -13,10 +13,6 @@ const isProd = NODE_ENV === "production";
 
 // === DOMINIOS PERMITIDOS ===
 const allowedDomains = [
-  process.env.LOCAL_CLIENT_APP,       // http://localhost:5173
-  process.env.REMOTE_CLIENT_APP,      // https://curacavi-frontend.onrender.com
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
   "https://curacavi-frontend.onrender.com",
 ].filter(Boolean);
 
@@ -56,7 +52,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
+      if (!origin) return callback(null, true); // Postman / SSR
       if (allowedDomains.includes(origin)) {
         return callback(null, true);
       }
@@ -69,15 +65,14 @@ app.use(
   })
 );
 
-
-// === PREFLIGHT ===
-app.options("*", (req, res) => {
+// === PREFLIGHT (Express 5 OK) ===
+// ⚠️ IMPORTANT: Express 5 YA NO ACEPTA "*", debe ser /(.*)
+app.options("/(.*)", (req, res) => {
   res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
   res.sendStatus(204);
 });
-
 
 // === DEBUG LOCAL ===
 if (!isProd) {
@@ -112,6 +107,11 @@ app.get("/", (_, res) => {
       : process.env.LOCAL_SERVER_API,
     time: new Date().toISOString(),
   });
+});
+
+// === CATCH-ALL (Express 5 OK, sin "*") ===
+app.use("/(.*)", (req, res) => {
+  res.status(404).json({ error: "Ruta no encontrada" });
 });
 
 // === INICIO SERVIDOR ===

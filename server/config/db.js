@@ -1,26 +1,31 @@
-// ================== PostgreSQL Pool ==================
+// =========================
+//  PostgreSQL - Render.com
+// =========================
 const { Pool } = require("pg");
-require("dotenv").config();
+
+if (!process.env.DATABASE_URL) {
+  console.error("❌ ERROR: DATABASE_URL no está definida");
+  process.exit(1);
+}
+
+console.log("🔌 Conectando a PostgreSQL...");
 
 const pool = new Pool({
-  host: process.env.PG_HOST,
-  user: process.env.PG_USER,
-  password: process.env.PG_PASSWORD,
-  database: process.env.PG_DATABASE,
-  port: process.env.PG_PORT || 5432,
+  connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false, // requerido para Render.com
+    rejectUnauthorized: false, // Render requiere SSL
   },
 });
 
-// Test inicial de conexión
-pool.connect()
-  .then(client => {
-    console.log("✅ PostgreSQL conectado");
+// Test de conexión
+pool
+  .connect()
+  .then((client) => {
+    console.log("✅ PostgreSQL conectado correctamente");
     client.release();
   })
-  .catch(err => console.error("❌ Error PostgreSQL:", err));
+  .catch((err) => {
+    console.error("❌ Error PostgreSQL:", err);
+  });
 
-module.exports = {
-  db: pool,
-};
+module.exports = pool;
