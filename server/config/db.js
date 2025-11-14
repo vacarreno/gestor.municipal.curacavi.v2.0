@@ -1,20 +1,26 @@
-// config/db.js
-const mysql = require("mysql2/promise"); // ✅ usa la versión con promesas
+// ================== PostgreSQL Pool ==================
+const { Pool } = require("pg");
 require("dotenv").config();
 
-const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
+const pool = new Pool({
+  host: process.env.PG_HOST,
+  user: process.env.PG_USER,
+  password: process.env.PG_PASSWORD,
+  database: process.env.PG_DATABASE,
+  port: process.env.PG_PORT || 5432,
+  ssl: {
+    rejectUnauthorized: false, // requerido para Render.com
+  },
 });
 
-db.getConnection()
-  .then(() => console.log("✅ Conectado a la base de datos"))
-  .catch((err) => console.error("❌ Error al conectar con la base de datos:", err));
+// Test inicial de conexión
+pool.connect()
+  .then(client => {
+    console.log("✅ PostgreSQL conectado");
+    client.release();
+  })
+  .catch(err => console.error("❌ Error PostgreSQL:", err));
 
-module.exports = { db };
-
+module.exports = {
+  db: pool,
+};

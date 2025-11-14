@@ -1,4 +1,4 @@
-// routes/usuarios.js
+// routes/conductorRoutes.js
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const { db } = require("../config/db");
@@ -6,80 +6,116 @@ const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// === Obtener todos los usuarios ===
+// === Obtener todos los conductores ===
 router.get("/", auth, async (_req, res) => {
   try {
-    const [rows] = await db.query(
-      "SELECT id, username, nombre, correo, rol, activo FROM usuarios ORDER BY id DESC"
+    const result = await db.query(
+      `
+      SELECT id, username, nombre, correo, rol, activo
+      FROM usuarios
+      WHERE rol = 'Conductor'
+      ORDER BY id DESC
+      `
     );
-    res.json(rows);
+
+    res.json(result.rows);
   } catch (err) {
-    console.error("❌ Error GET /usuarios:", err);
-    res.status(500).json({ message: "Error al obtener usuarios" });
+    console.error("❌ Error GET /conductores:", err);
+    res.status(500).json({ message: "Error al obtener conductores" });
   }
 });
 
-// === Crear usuario ===
+// === Crear conductor ===
 router.post("/", auth, async (req, res) => {
-  const { username, nombre, correo, rol, password } = req.body;
-  if (!username || !password)
+  const { username, nombre, correo, password } = req.body;
+
+  if (!username || !password) {
     return res.status(400).json({ message: "Usuario y contraseña obligatorios" });
+  }
 
   try {
     const hash = await bcrypt.hash(password, 10);
-    const [result] = await db.query(
-      "INSERT INTO usuarios (username, nombre, correo, rol, password_hash, activo) VALUES (?, ?, ?, ?, ?, 1)",
-      [username, nombre, correo, rol, hash]
+
+    const result = await db.query(
+      `
+      INSERT INTO usuarios (username, nombre, correo, rol, password_hash, activo)
+      VALUES ($1, $2, $3, 'Conductor', $4, 1)
+      RETURNING id
+      `,
+      [username, nombre, correo, hash]
     );
-    res.status(201).json({ id: result.insertId });
+
+    res.status(201).json({ id: result.rows[0].id });
   } catch (err) {
-    console.error("❌ Error POST /usuarios:", err);
-    res.status(500).json({ message: "Error al crear usuario" });
+    console.error("❌ Error POST /conductores:", err);
+    res.status(500).json({ message: "Error al crear conductor" });
   }
 });
 
-// === Actualizar datos usuario ===
+// === Actualizar datos conductor ===
 router.put("/:id", auth, async (req, res) => {
-  const { nombre, correo, rol, activo } = req.body;
+  const { nombre, correo, activo } = req.body;
+
   try {
     await db.query(
-      "UPDATE usuarios SET nombre=?, correo=?, rol=?, activo=? WHERE id=?",
-      [nombre, correo, rol, activo ? 1 : 0, req.params.id]
+      `
+      UPDATE usuarios
+      SET nombre = $1,
+          correo = $2,
+          activo = $3
+      WHERE id = $4 AND rol = 'Conductor'
+      `,
+      [nombre, correo, activo ? true : false, req.params.id]
     );
+
     res.json({ ok: true });
   } catch (err) {
-    console.error("❌ Error PUT /usuarios/:id:", err);
-    res.status(500).json({ message: "Error al actualizar usuario" });
+    console.error("❌ Error PUT /conductores/:id:", err);
+    res.status(500).json({ message: "Error al actualizar conductor" });
   }
 });
 
 // === Actualizar contraseña ===
 router.put("/:id/password", auth, async (req, res) => {
   const { password } = req.body;
+
   if (!password)
     return res.status(400).json({ message: "Contraseña requerida" });
 
   try {
     const hash = await bcrypt.hash(password, 10);
-    await db.query("UPDATE usuarios SET password_hash=? WHERE id=?", [
-      hash,
-      req.params.id,
-    ]);
+
+    await db.query(
+      `
+      UPDATE usuarios
+      SET password_hash = $1
+      WHERE id = $2 AND rol = 'Conductor'
+      `,
+      [hash, req.params.id]
+    );
+
     res.json({ ok: true });
   } catch (err) {
-    console.error("❌ Error PUT /usuarios/:id/password:", err);
+    console.error("❌ Error PUT /conductores/:id/password:", err);
     res.status(500).json({ message: "Error al actualizar contraseña" });
   }
 });
 
-// === Eliminar usuario ===
+// === Eliminar conductor ===
 router.delete("/:id", auth, async (req, res) => {
   try {
-    await db.query("DELETE FROM usuarios WHERE id=?", [req.params.id]);
+    await db.query(
+      `
+      DELETE FROM usuarios
+      WHERE id = $1 AND rol = 'Conductor'
+      `,
+      [req.params.id]
+    );
+
     res.json({ ok: true });
   } catch (err) {
-    console.error("❌ Error DELETE /usuarios/:id:", err);
-    res.status(500).json({ message: "Error al eliminar usuario" });
+    console.error("❌ Error DELETE /conductores/:id:", err);
+    res.status(500).json({ message: "Error al eliminar conductor" });
   }
 });
 

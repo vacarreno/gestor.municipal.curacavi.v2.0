@@ -1,4 +1,4 @@
-// ================== app.js (Render + Local) ==================
+// ================== app.js (Render + Local, PostgreSQL OK) ==================
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -56,7 +56,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedDomains.includes(origin)) return callback(null, true);
+      if (!origin || allowedDomains.includes(origin)) {
+        return callback(null, true);
+      }
       console.warn("❌ CORS bloqueado para:", origin);
       callback(new Error("CORS no permitido: " + origin));
     },
@@ -94,9 +96,6 @@ app.use("/inspecciones", require("./routes/inspeccionRoutes"));
 app.use("/reportes", require("./routes/reportesRoutes"));
 app.use("/mantenciones", require("./routes/mantencionesRoutes"));
 app.use("/mantenciones/pdf", require("./routes/mantencionesPdfRoutes"));
-
-
-
 
 // === HEALTHCHECK ===
 app.get("/", (_, res) => {

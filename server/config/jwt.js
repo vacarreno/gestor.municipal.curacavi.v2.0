@@ -1,22 +1,24 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
-const JWT_EXPIRES = process.env.JWT_EXPIRES || "10m";
 
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
+const JWT_EXPIRES = process.env.JWT_EXPIRES || "8h";
+
+// === Generar token ===
 function signToken(user) {
-  // Incluye id, nombre y rol directamente
   return jwt.sign(
     {
-      id: user.id,            // ← NECESARIO para req.user.id
-      sub: user.id,
+      id: user.id,                 // requerido por auth y rutas
+      sub: user.id,                // estándar JWT
       username: user.username,
       nombre: user.nombre || "",
-      rol: user.rol,
+      rol: user.rol || "Usuario",
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES }
   );
 }
 
+// === Validar token ===
 function verifyToken(token) {
   return jwt.verify(token, JWT_SECRET);
 }
