@@ -11,13 +11,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ✅ Detectar mensajes según query param
+  // Mensajes GET (?expired & ?unauth)
   useEffect(() => {
     const q = new URLSearchParams(search);
+
     if (q.get("expired")) {
       setError("Tu sesión expiró. Inicia sesión nuevamente.");
       sessionStorage.clear();
     }
+
     if (q.get("unauth")) {
       setError("Debes iniciar sesión para continuar.");
       sessionStorage.clear();
@@ -26,7 +28,8 @@ export default function Login() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (loading) return; // evita doble submit
+
+    if (loading) return;
     setError("");
 
     if (!username.trim() || !password.trim()) {
@@ -37,14 +40,32 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { data } = await api.post("/auth/login", { username, password });
+      const res = await api.post("/auth/login", { username, password });
+      const data = res.data;
+
+      if (!data?.token || !data?.user) {
+        setError("Respuesta del servidor inválida.");
+        return;
+      }
 
       sessionStorage.setItem("token", data.token);
       sessionStorage.setItem("user", JSON.stringify(data.user));
 
       nav("/dashboard", { replace: true });
     } catch (err) {
-      setError(typeof err === "string" ? err : "Error al iniciar sesión");
+      // Normaliza mensaje de error
+      const msg =
+        err?.response?.data?.message || 
+        err?.response?.data?.error ||
+        err?.message ||
+        (typeof err === "string" ? err : "Error al iniciar sesión");
+
+      // Caso típico CORS bloqueado en Render
+      if (msg.includes("CORS") || msg.includes("Failed to fetch")) {
+        setError("El servidor no permite la conexión (CORS block).");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }

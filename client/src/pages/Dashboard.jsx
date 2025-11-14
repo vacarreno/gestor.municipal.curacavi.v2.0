@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/http";
+
 import {
   BarChart,
   Bar,
@@ -18,6 +19,7 @@ export default function Dashboard() {
     conductores: 0,
     inspecciones: 0,
   });
+
   const [vehiculosConInspecciones, setVehiculosConInspecciones] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +27,7 @@ export default function Dashboard() {
     const load = async () => {
       setLoading(true);
       try {
-        // === Cargar datos base ===
+        // --- Consultas paralelas ---
         const [usr, veh, cond, insp] = await Promise.all([
           api.get("/usuarios"),
           api.get("/vehiculos"),
@@ -33,41 +35,50 @@ export default function Dashboard() {
           api.get("/inspecciones"),
         ]);
 
-        // === Totales ===
+        const usuarios = usr?.data || [];
+        const vehiculos = veh?.data || [];
+        const conductores = cond?.data || [];
+        const inspecciones = insp?.data || [];
+
+        // --- Total de conductores ---
         const totalConductores =
-          cond?.data?.length ||
-          (usr.data || []).filter((u) => u.rol?.toLowerCase?.() === "conductor")
-            .length;
+          conductores.length ||
+          usuarios.filter((u) => u.rol?.toLowerCase() === "conductor").length;
 
         setStats({
-          usuarios: usr.data?.length || 0,
-          vehiculos: veh.data?.length || 0,
+          usuarios: usuarios.length,
+          vehiculos: vehiculos.length,
           conductores: totalConductores,
-          inspecciones: insp.data?.length || 0,
+          inspecciones: inspecciones.length,
         });
 
-        // === Combinar vehículos con sus inspecciones ===
+        // --- Agrupar inspecciones por patente ---
         const mapaInspecciones = {};
-        insp.data.forEach((i) => {
+        inspecciones.forEach((i) => {
           const patente =
-            i.vehiculo_patente || i.patente || i.vehiculo_id || "Desconocido";
-          mapaInspecciones[patente] = (mapaInspecciones[patente] || 0) + 1;
+            i.vehiculo_patente ||
+            i.patente ||
+            i.vehiculo ||
+            `ID-${i.vehiculo_id}` ||
+            "Desconocido";
+
+          mapaInspecciones[patente] =
+            (mapaInspecciones[patente] || 0) + 1;
         });
 
-        // === Generar dataset principal ===
-        const dataChart = veh.data
+        // --- Combinar vehículos con un dataset compacto ---
+        const dataChart = vehiculos
           .map((v) => ({
-            patente: v.patente || v.placa || "Sin Patente",
-            marca: v.marca || "-",
-            modelo: v.modelo || "-",
+            patente: v.patente || "Sin Patente",
             total_inspecciones: mapaInspecciones[v.patente] || 0,
           }))
-          .sort((a, b) => a.patente.localeCompare(b.patente)); // orden alfabético
+          .sort((a, b) => a.patente.localeCompare(b.patente));
 
         setVehiculosConInspecciones(dataChart);
-      } catch (e) {
-        console.error("❌ Error cargando datos del dashboard:", e);
-        alert("Error cargando datos: " + e.message);
+      } catch (err) {
+        const msg = err?.message || err || "Error inesperado";
+        console.error("❌ Error cargando dashboard:", msg);
+        alert("Error cargando datos: " + msg);
       } finally {
         setLoading(false);
       }
@@ -78,7 +89,7 @@ export default function Dashboard() {
 
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
 
-  // === Spinner de carga ===
+  // --- Loader global ---
   if (loading)
     return (
       <div
@@ -93,7 +104,9 @@ export default function Dashboard() {
           >
             <span className="visually-hidden">Cargando...</span>
           </div>
-          <p className="mt-3 text-muted">Cargando datos del dashboard...</p>
+          <p className="mt-3 text-muted">
+            Cargando datos del dashboard...
+          </p>
         </div>
       </div>
     );
@@ -102,7 +115,7 @@ export default function Dashboard() {
     <div className="container-fluid">
       <h3 className="mb-4">Panel de Control</h3>
 
-      {/* TARJETAS DE ESTADÍSTICAS */}
+      {/* --- CARDS --- */}
       <div className="row g-3">
         <div className="col-md-3 col-sm-6">
           <div className="card text-center p-3 shadow-sm border-primary">
@@ -133,32 +146,35 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* === GRÁFICO VEHÍCULOS + INSPECCIONES === */}
+      {/* --- GRÁFICO --- */}
       <div className="card p-3 mt-4 shadow-sm">
-        <h5 className="mb-3">🚗 Vehículos con Inspecciones (ordenados por patente)</h5>
+        <h5 className="mb-3">
+          🚗 Vehículos con Inspecciones (ordenados por patente)
+        </h5>
+
         {vehiculosConInspecciones.length ? (
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={vehiculosConInspecciones}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="patente" tick={{ fontSize: 11 }} />
               <YAxis allowDecimals={false} />
-              <Tooltip
-                formatter={(value, name) =>
-                  name === "total_inspecciones"
-                    ? [`${value} inspecciones`, "Total"]
-                    : value
-                }
-              />
+              <Tooltip />
               <Legend />
-              <Bar dataKey="total_inspecciones" fill="#0d6efd" name="Inspecciones" />
+              <Bar
+                dataKey="total_inspecciones"
+                fill="#0d6efd"
+                name="Inspecciones"
+              />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-center text-muted">No hay datos de vehículos.</p>
+          <p className="text-center text-muted">
+            No hay datos de vehículos.
+          </p>
         )}
       </div>
 
-      {/* RESUMEN */}
+      {/* --- RESUMEN --- */}
       <div className="card p-3 mt-4 shadow-sm">
         <h5 className="mb-3">Resumen general</h5>
         <ul className="list-group list-group-flush small">
@@ -169,13 +185,14 @@ export default function Dashboard() {
           <li className="list-group-item">
             API activa en:{" "}
             <strong>
-              {import.meta.env.VITE_API_URL || "http://localhost:3001"}
+              {import.meta.env.VITE_API_URL ||
+                "https://curacavi-backend.onrender.com"}
             </strong>
           </li>
           <li className="list-group-item">
             Usuario actual:{" "}
-            <strong>{user?.username || "No identificado"}</strong> (
-            {user?.rol || "sin rol"})
+            <strong>{user?.username || "No identificado"}</strong>{" "}
+            ({user?.rol || "sin rol"})
           </li>
         </ul>
       </div>

@@ -9,6 +9,8 @@ export default function Mantenciones() {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
   const [form, setForm] = useState({
     id: null,
     vehiculo_id: "",
@@ -18,12 +20,11 @@ export default function Mantenciones() {
     costo: "",
     items: [],
   });
-  const [isEditing, setIsEditing] = useState(false);
 
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const isConductor = user?.rol?.toLowerCase() === "conductor";
 
-  // === CARGAR DATOS ===
+  // ======================= CARGA DATOS ==========================
   const loadData = async () => {
     setLoading(true);
     try {
@@ -32,11 +33,12 @@ export default function Mantenciones() {
         api.get("/vehiculos"),
         api.get("/usuarios"),
       ]);
+
       setMantenciones(mant.data || []);
       setVehiculos(veh.data || []);
       setUsuarios(usr.data || []);
     } catch (e) {
-      alert("Error cargando datos: " + e.message);
+      alert("Error cargando datos: " + (e?.message || "Error desconocido"));
     } finally {
       setLoading(false);
     }
@@ -46,7 +48,7 @@ export default function Mantenciones() {
     loadData();
   }, []);
 
-  // === FUNCIONES DE FORMULARIO ===
+  // ======================= FORMULARIO ===========================
   const abrirModal = (m = null) => {
     if (m) {
       setForm({ ...m, items: m.items || [] });
@@ -71,7 +73,6 @@ export default function Mantenciones() {
     setIsEditing(false);
   };
 
-  // === AGREGAR / ELIMINAR ITEM ===
   const addItem = () => {
     setForm((f) => ({
       ...f,
@@ -89,25 +90,26 @@ export default function Mantenciones() {
     }));
   };
 
-  const updateItem = (index, field, value) => {
+  const updateItem = (idx, field, value) => {
     setForm((f) => {
       const items = [...f.items];
-      items[index][field] = value;
+      items[idx][field] = value;
       return { ...f, items };
     });
   };
 
-  // === GUARDAR / ACTUALIZAR ===
+  // ======================= GUARDAR ==============================
   const guardar = async () => {
     const { vehiculo_id, usuario_id, tipo, observacion, costo, items, id } = form;
+
     if (!vehiculo_id || !tipo) {
       alert("Debe seleccionar vehículo y tipo de mantención");
       return;
     }
 
     const payload = {
-      vehiculo_id,
-      usuario_id,
+      vehiculo_id: Number(vehiculo_id),
+      usuario_id: Number(usuario_id),
       tipo,
       observacion,
       costo: parseFloat(costo) || 0,
@@ -130,13 +132,19 @@ export default function Mantenciones() {
       cerrarModal();
       loadData();
     } catch (e) {
-      alert("Error al guardar: " + (e.response?.data?.message || e.message));
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Error inesperado";
+      alert("Error al guardar: " + msg);
     }
   };
 
-  // === ELIMINAR ===
+  // ======================= ELIMINAR =============================
   const eliminar = async (id) => {
     if (!window.confirm("¿Desea eliminar esta mantención?")) return;
+
     try {
       await api.delete(`/mantenciones/${id}`);
       alert("Mantención eliminada correctamente");
@@ -146,19 +154,20 @@ export default function Mantenciones() {
     }
   };
 
-  // === DESCARGAR PDF ===
+  // ======================= PDF ===============================
   const verPDF = (id) => {
-    const url = `${import.meta.env.VITE_API_URL}/mantenciones/${id}/pdf`;
+    const url = `https://curacavi-backend.onrender.com/mantenciones/${id}/pdf`;
     window.open(url, "_blank");
   };
 
-  // === UI PRINCIPAL ===
+  // ======================= UI PRINCIPAL =========================
   return (
     <div className="container-fluid px-2 px-sm-3">
       <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3">
         <h3 className="m-0 text-primary fw-semibold mb-2 mb-sm-0">
           Mantenciones
         </h3>
+
         {!isConductor && (
           <Button
             variant="primary"
@@ -215,6 +224,7 @@ export default function Mantenciones() {
                         >
                           📄
                         </Button>
+
                         {!isConductor && (
                           <>
                             <button
@@ -224,6 +234,7 @@ export default function Mantenciones() {
                             >
                               <PencilSquare size={18} />
                             </button>
+
                             <button
                               className="btn btn-link text-danger p-0"
                               title="Eliminar"
@@ -256,6 +267,7 @@ export default function Mantenciones() {
             {isEditing ? "Editar Mantención" : "Nueva Mantención"}
           </Modal.Title>
         </Modal.Header>
+
         <Modal.Body>
           <Form>
             <div className="row">
@@ -332,6 +344,7 @@ export default function Mantenciones() {
             <h5 className="fw-semibold text-secondary mb-3">
               Detalle de Tareas / Repuestos
             </h5>
+
             <div className="table-responsive">
               <Table bordered size="sm" className="align-middle text-center">
                 <thead className="table-light">
@@ -344,6 +357,7 @@ export default function Mantenciones() {
                     <th></th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {form.items.map((item, idx) => (
                     <tr key={idx}>
@@ -355,6 +369,7 @@ export default function Mantenciones() {
                           }
                         />
                       </td>
+
                       <td>
                         <Form.Select
                           value={item.tipo}
@@ -367,6 +382,7 @@ export default function Mantenciones() {
                           <option value="Otro">Otro</option>
                         </Form.Select>
                       </td>
+
                       <td>
                         <Form.Control
                           type="number"
@@ -376,15 +392,21 @@ export default function Mantenciones() {
                           }
                         />
                       </td>
+
                       <td>
                         <Form.Control
                           type="number"
                           value={item.costo_unitario}
                           onChange={(e) =>
-                            updateItem(idx, "costo_unitario", e.target.value)
+                            updateItem(
+                              idx,
+                              "costo_unitario",
+                              e.target.value
+                            )
                           }
                         />
                       </td>
+
                       <td>
                         $
                         {(
@@ -392,6 +414,7 @@ export default function Mantenciones() {
                           (parseFloat(item.costo_unitario) || 0)
                         ).toLocaleString("es-CL")}
                       </td>
+
                       <td>
                         <Button
                           variant="outline-danger"
@@ -418,6 +441,7 @@ export default function Mantenciones() {
             </Button>
           </Form>
         </Modal.Body>
+
         <Modal.Footer>
           <Button variant="secondary" onClick={cerrarModal}>
             Cancelar

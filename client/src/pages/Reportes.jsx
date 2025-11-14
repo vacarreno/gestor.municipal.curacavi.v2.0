@@ -11,82 +11,76 @@ export default function Reportes() {
   const [fechaFin, setFechaFin] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+
   const perPage = 10;
 
-  // === OBTENER Y FILTRAR ===
+  // =========================== LOAD + FILTROS ===========================
   const fetchFiltered = async () => {
     setLoading(true);
     try {
       const { data } = await api.get("/inspecciones");
       let filtradas = data || [];
 
+      // --- normalizar fechas ---
+      const fInicio = fechaInicio ? new Date(fechaInicio + " 00:00:00") : null;
+      const fFin = fechaFin ? new Date(fechaFin + " 23:59:59") : null;
+
       if (searchConductor.trim()) {
+        const s = searchConductor.toLowerCase();
         filtradas = filtradas.filter((r) =>
-          r.conductor_nombre
-            ?.toLowerCase()
-            .includes(searchConductor.toLowerCase())
+          r.conductor_nombre?.toLowerCase().includes(s)
         );
       }
 
       if (searchVehiculo.trim()) {
+        const s = searchVehiculo.toLowerCase();
         filtradas = filtradas.filter((r) =>
-          r.vehiculo_patente
-            ?.toLowerCase()
-            .includes(searchVehiculo.toLowerCase())
+          r.vehiculo_patente?.toLowerCase().includes(s)
         );
       }
 
-      if (fechaInicio) {
-        filtradas = filtradas.filter(
-          (r) => new Date(r.fecha) >= new Date(fechaInicio)
-        );
-      }
-
-      if (fechaFin) {
-        filtradas = filtradas.filter(
-          (r) => new Date(r.fecha) <= new Date(fechaFin)
-        );
-      }
+      if (fInicio) filtradas = filtradas.filter((r) => new Date(r.fecha) >= fInicio);
+      if (fFin) filtradas = filtradas.filter((r) => new Date(r.fecha) <= fFin);
 
       setTotal(filtradas.length);
+
       const start = (page - 1) * perPage;
       const end = start + perPage;
+
       setRows(filtradas.slice(start, end));
     } catch (e) {
       console.error("Error obteniendo inspecciones:", e);
-      alert("Error al obtener inspecciones: " + e.message);
+      alert("Error al obtener inspecciones: " + (e?.message || "Error inesperado"));
     } finally {
       setLoading(false);
     }
   };
 
-  // === DEBOUNCE EN FILTROS ===
   useEffect(() => {
-    const delay = setTimeout(() => {
-      fetchFiltered();
-    }, 400);
+    const delay = setTimeout(fetchFiltered, 350);
     return () => clearTimeout(delay);
   }, [page, searchConductor, searchVehiculo, fechaInicio, fechaFin]);
 
-  // === ABRIR PDF (usa nueva ruta /reportes/inspeccion/:id/pdf) ===
+  // =========================== PDF ===========================
   const abrirInforme = async (id) => {
     setLoading(true);
     try {
-      const response = await api.get(`/reportes/inspeccion/${id}/pdf`, {
+      const res = await api.get(`/reportes/inspeccion/${id}/pdf`, {
         responseType: "blob",
       });
-      const file = new Blob([response.data], { type: "application/pdf" });
+
+      const file = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(file);
       window.open(url, "_blank");
     } catch (e) {
-      console.error("Error al abrir PDF:", e);
-      alert("Error al abrir informe PDF: " + e.message);
+      console.error("Error PDF:", e);
+      alert("No se pudo abrir el informe PDF.");
     } finally {
       setLoading(false);
     }
   };
 
-  // === LIMPIAR FILTROS ===
+  // =========================== CLEAR FILTERS ===========================
   const limpiarFiltros = () => {
     setSearchConductor("");
     setSearchVehiculo("");
@@ -95,15 +89,16 @@ export default function Reportes() {
     setPage(1);
   };
 
-  // === PAGINACIÓN ===
+  // =========================== PAGINACIÓN ===========================
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   const startIdx = (page - 1) * perPage;
 
-  // === MODAL DE IMÁGENES ===
+  // =========================== MODAL FOTO ===========================
   const [modalFotos, setModalFotos] = useState(null);
+
   const abrirFotos = (fotoBase64) => {
     if (!fotoBase64) {
-      alert("No hay fotografías disponibles para esta inspección.");
+      alert("No hay fotografías para esta inspección.");
       return;
     }
     setModalFotos([fotoBase64]);
@@ -111,6 +106,7 @@ export default function Reportes() {
 
   return (
     <div className="container-fluid">
+
       {/* HEADER */}
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h3 className="m-0">Reporte de Inspecciones</h3>
@@ -139,6 +135,7 @@ export default function Reportes() {
               disabled={loading}
             />
           </div>
+
           <div className="col-md-3">
             <input
               type="text"
@@ -152,6 +149,7 @@ export default function Reportes() {
               disabled={loading}
             />
           </div>
+
           <div className="col-md-2">
             <input
               type="date"
@@ -164,6 +162,7 @@ export default function Reportes() {
               disabled={loading}
             />
           </div>
+
           <div className="col-md-2">
             <input
               type="date"
@@ -176,6 +175,7 @@ export default function Reportes() {
               disabled={loading}
             />
           </div>
+
           <div className="col-md-2 d-grid">
             <button
               className="btn btn-outline-secondary"
@@ -201,29 +201,30 @@ export default function Reportes() {
                 <th className="text-center">Informe</th>
               </tr>
             </thead>
+
             <tbody>
-              {rows.map((r, index) => (
-                <tr key={r.id}>
-                  <td>{index + 1}</td>
-                  <td>{r.conductor_nombre}</td>
-                  <td>{r.vehiculo_patente}</td>
-                  <td>{new Date(r.fecha).toLocaleString("es-CL")}</td>
-                  <td className="text-center">
-                    <button
-                      className="btn btn-link text-danger p-0"
-                      title="Ver informe PDF"
-                      onClick={() => abrirInforme(r.id)}
-                      disabled={loading}
-                    >
-                      <FiletypePdf size={22} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {rows.length > 0 && !loading &&
+                rows.map((r, idx) => (
+                  <tr key={r.id}>
+                    <td>{startIdx + idx + 1}</td>
+                    <td>{r.conductor_nombre}</td>
+                    <td>{r.vehiculo_patente}</td>
+                    <td>{new Date(r.fecha).toLocaleString("es-CL")}</td>
+                    <td className="text-center">
+                      <button
+                        className="btn btn-link text-danger p-0"
+                        onClick={() => abrirInforme(r.id)}
+                        title="Ver PDF"
+                      >
+                        <FiletypePdf size={22} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
 
               {!rows.length && !loading && (
                 <tr>
-                  <td colSpan="7" className="text-center text-muted p-4">
+                  <td colSpan="6" className="text-center text-muted p-4">
                     Sin registros disponibles
                   </td>
                 </tr>
@@ -231,10 +232,8 @@ export default function Reportes() {
 
               {loading && (
                 <tr>
-                  <td colSpan="7" className="text-center p-4">
-                    <div className="spinner-border text-primary" role="status">
-                      <span className="visually-hidden">Cargando...</span>
-                    </div>
+                  <td colSpan="6" className="text-center p-4">
+                    <div className="spinner-border text-primary"></div>
                   </td>
                 </tr>
               )}
@@ -249,6 +248,7 @@ export default function Reportes() {
           Mostrando {total ? startIdx + 1 : 0}–
           {Math.min(startIdx + perPage, total)} de {total} registros
         </div>
+
         <div className="btn-group">
           <button
             className="btn btn-outline-secondary btn-sm"
@@ -257,9 +257,11 @@ export default function Reportes() {
           >
             ‹ Anterior
           </button>
+
           <button className="btn btn-outline-secondary btn-sm" disabled>
             Página {page} / {totalPages}
           </button>
+
           <button
             className="btn btn-outline-secondary btn-sm"
             disabled={page >= totalPages || loading}
@@ -270,7 +272,7 @@ export default function Reportes() {
         </div>
       </div>
 
-      {/* MODAL DE FOTO */}
+      {/* MODAL FOTO */}
       {modalFotos && (
         <div
           className="modal fade show"
@@ -289,7 +291,6 @@ export default function Reportes() {
               <div className="modal-header">
                 <h5 className="modal-title">Evidencia fotográfica</h5>
                 <button
-                  type="button"
                   className="btn-close"
                   onClick={() => setModalFotos(null)}
                 ></button>

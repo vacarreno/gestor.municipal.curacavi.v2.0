@@ -1,30 +1,33 @@
-import { useEffect, useState } from 'react'
-import api from '../api/http'
-import { Button } from 'react-bootstrap'
+import { useEffect, useState } from "react";
+import api from "../api/http";
+import { Button } from "react-bootstrap";
 
 export default function Conductores() {
-  const [conductores, setConductores] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [conductores, setConductores] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // === CARGAR DATOS (solo usuarios con rol Conductor) ===
+  // === CARGAR CONDUCTORES ===
   const load = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const { data } = await api.get('/usuarios')
+      const { data } = await api.get("/usuarios");
+
       const soloConductores = (data || []).filter(
-        (u) => u.rol?.toLowerCase?.() === 'conductor'
-      )
-      setConductores(soloConductores)
-    } catch (e) {
-      alert('Error cargando conductores: ' + e.message)
+        (u) => u?.rol?.toLowerCase?.() === "conductor"
+      );
+
+      setConductores(soloConductores);
+    } catch (err) {
+      const msg = err?.message || err || "Error inesperado.";
+      alert("Error cargando conductores: " + msg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    load()
-  }, [])
+    load();
+  }, []);
 
   return (
     <div className="container-fluid">
@@ -50,23 +53,24 @@ export default function Conductores() {
                 <th>Clase Licencia</th>
               </tr>
             </thead>
+
             <tbody>
               {conductores.map((c, index) => (
                 <tr key={c.id}>
                   <td>{index + 1}</td>
                   <td>{c.nombre}</td>
-                  <td>{c.correo || '-'}</td>
-                  <td>{c.departamento || '-'}</td>
-                  <td>{c.rut || '-'}</td>
-                  <td>{c.direccion || '-'}</td>
-                  <td>{c.telefono || '-'}</td>
-                  <td>{c.licencia || '-'}</td>
+                  <td>{c.correo || "-"}</td>
+                  <td>{c.departamento || "-"}</td>
+                  <td>{c.rut || "-"}</td>
+                  <td>{c.direccion || "-"}</td>
+                  <td>{c.telefono || "-"}</td>
+                  <td>{c.licencia || "-"}</td>
                 </tr>
               ))}
 
               {!conductores.length && !loading && (
                 <tr>
-                  <td colSpan="7" className="text-center text-muted">
+                  <td colSpan="8" className="text-center text-muted">
                     Sin registros
                   </td>
                 </tr>
@@ -74,7 +78,7 @@ export default function Conductores() {
 
               {loading && (
                 <tr>
-                  <td colSpan="7" className="text-center">
+                  <td colSpan="8" className="text-center">
                     Cargando...
                   </td>
                 </tr>
@@ -84,5 +88,5 @@ export default function Conductores() {
         </div>
       </div>
     </div>
-  )
+  );
 }

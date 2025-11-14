@@ -4,6 +4,11 @@ import api from "../api/http";
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [rutValido, setRutValido] = useState(true);
+  const [formKey, setFormKey] = useState(0);
+
   const [form, setForm] = useState({
     id: null,
     username: "",
@@ -17,52 +22,60 @@ export default function Usuarios() {
     rol: "Usuario",
     password: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [rutValido, setRutValido] = useState(true);
-  const [formKey, setFormKey] = useState(0); // clave para forzar limpieza
 
-  // === FUNCIONES RUT ===
+  // ============================
+  // RUT CHILE — VALIDACIÓN
+  // ============================
   const cleanRut = (rut) => rut.replace(/[^0-9kK]/g, "").toUpperCase();
 
   const formatRut = (rut) => {
     rut = cleanRut(rut);
     if (rut.length <= 1) return rut;
+
     const cuerpo = rut.slice(0, -1);
     const dv = rut.slice(-1);
+
     return cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + dv;
   };
 
   const validarRut = (rut) => {
     rut = cleanRut(rut);
     if (rut.length < 8) return false;
+
     const cuerpo = rut.slice(0, -1);
-    const dv = rut.slice(-1);
+    const dv = rut.slice(-1).toUpperCase();
+
     let suma = 0;
-    let multiplicador = 2;
+    let mult = 2;
+
     for (let i = cuerpo.length - 1; i >= 0; i--) {
-      suma += parseInt(cuerpo[i]) * multiplicador;
-      multiplicador = multiplicador < 7 ? multiplicador + 1 : 2;
+      suma += Number(cuerpo[i]) * mult;
+      mult = mult < 7 ? mult + 1 : 2;
     }
+
     const resto = 11 - (suma % 11);
-    const dvEsperado = resto === 11 ? "0" : resto === 10 ? "K" : resto.toString();
+    const dvEsperado =
+      resto === 11 ? "0" : resto === 10 ? "K" : String(resto);
+
     return dvEsperado === dv;
   };
 
   const handleRutChange = (e) => {
     const formatted = formatRut(e.target.value);
-    setForm((s) => ({ ...s, rut: formatted }));
+    setForm((f) => ({ ...f, rut: formatted }));
     setRutValido(formatted === "" || validarRut(formatted));
   };
 
-  // === CARGAR USUARIOS ===
+  // ============================
+  // LOAD USERS
+  // ============================
   const load = async () => {
     setLoading(true);
     try {
       const { data } = await api.get("/usuarios");
       setUsuarios(data || []);
     } catch (e) {
-      alert("Error cargando usuarios: " + e.message);
+      alert("Error cargando usuarios: " + (e.message || "Error"));
     } finally {
       setLoading(false);
     }
@@ -72,16 +85,21 @@ export default function Usuarios() {
     load();
   }, []);
 
-  // === VALIDAR CAMPOS ÚNICOS ===
+  // ============================
+  // Duplicados
+  // ============================
   const existeDuplicado = (campo, valor, idActual = null) => {
     if (!valor) return false;
     return usuarios.some(
       (u) =>
-        u[campo]?.toLowerCase() === valor.toLowerCase() && u.id !== idActual
+        u[campo]?.toLowerCase() === valor.toLowerCase() &&
+        u.id !== idActual
     );
   };
 
-  // === RESETEAR FORM ===
+  // ============================
+  // Reset form
+  // ============================
   const limpiarFormulario = () => {
     setForm({
       id: null,
@@ -99,89 +117,107 @@ export default function Usuarios() {
     setRutValido(true);
   };
 
-  // === GUARDAR O ACTUALIZAR ===
+  // ============================
+  // SAVE / UPDATE
+  // ============================
   const handleSubmit = async () => {
     if (!form.username.trim()) return alert("Debe ingresar un usuario");
     if (!form.correo.trim()) return alert("Debe ingresar un correo válido");
-    if (form.rut && !validarRut(form.rut))
-      return alert("El RUT ingresado no es válido");
+    if (form.rut && !validarRut(form.rut)) return alert("El RUT es inválido");
 
     if (existeDuplicado("username", form.username, form.id))
-      return alert("El nombre de usuario ya está registrado");
+      return alert("El usuario ya existe");
+
     if (existeDuplicado("correo", form.correo, form.id))
-      return alert("El correo ya está registrado");
+      return alert("El correo ya existe");
 
+    const payload = {
+      ...form,
+      rut: formatRut(form.rut || ""),
+    };
+
+    setLoading(true);
     try {
-      setLoading(true);
-      const payload = { ...form, rut: formatRut(form.rut || "") };
-
       if (form.id) {
+        // UPDATE
         await api.put(`/usuarios/${form.id}`, payload);
         alert("Usuario actualizado correctamente");
       } else {
-        if (!form.password)
-          return alert("Debe ingresar una contraseña para nuevo usuario");
+        // CREATE
+        if (!form.password.trim())
+          return alert("Debe ingresar una contraseña");
         await api.post("/usuarios", payload);
         alert("Usuario creado correctamente");
       }
 
-      limpiarFormulario();
-      setShowModal(false);
-      setFormKey((k) => k + 1); // fuerza limpieza del formulario
+      cerrarModal();
       load();
     } catch (e) {
-      alert("Error guardando usuario: " + e.message);
+      alert("Error guardando usuario: " + (e.response?.data?.message || e.message));
     } finally {
       setLoading(false);
     }
   };
 
-  // === EDITAR ===
+  // ============================
+  // Editar
+  // ============================
   const editar = (u) => {
     setForm({ ...u, password: "" });
     setShowModal(true);
   };
 
-  // === CAMBIAR PASSWORD ===
+  // ============================
+  // Cambiar password
+  // ============================
   const cambiarPassword = async (id) => {
-    const nueva = prompt("Ingrese nueva contraseña:");
+    const nueva = prompt("Nueva contraseña:");
     if (!nueva) return;
+
     try {
       await api.put(`/usuarios/${id}/password`, { password: nueva });
       alert("Contraseña actualizada");
     } catch (e) {
-      alert("Error actualizando contraseña: " + e.message);
+      alert("Error: " + e.message);
     }
   };
 
-  // === ELIMINAR ===
+  // ============================
+  // Eliminar
+  // ============================
   const eliminar = async (id) => {
-    if (!window.confirm("¿Eliminar este usuario?")) return;
+    if (!window.confirm("¿Eliminar usuario?")) return;
+
     try {
       await api.delete(`/usuarios/${id}`);
       alert("Usuario eliminado");
       load();
     } catch (e) {
-      alert("Error eliminando: " + e.message);
+      alert("Error: " + e.message);
     }
   };
 
-  // === NUEVO USUARIO ===
+  // ============================
+  // Modal
+  // ============================
   const nuevoUsuario = () => {
     limpiarFormulario();
-    setFormKey((k) => k + 1); // fuerza render limpio
+    setFormKey((k) => k + 1);
     setShowModal(true);
   };
 
-  // === CERRAR MODAL ===
   const cerrarModal = () => {
     limpiarFormulario();
     setFormKey((k) => k + 1);
     setShowModal(false);
   };
 
+  // ============================================
+  // RENDER
+  // ============================================
   return (
     <div className="container-fluid">
+
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h3 className="m-0">Gestión de Usuarios</h3>
         <Button variant="primary" onClick={nuevoUsuario}>
@@ -190,8 +226,9 @@ export default function Usuarios() {
       </div>
 
       {/* LISTA */}
-      <div className="card p-3">
+      <div className="card p-3 shadow-sm">
         <h5>Usuarios registrados</h5>
+
         <div className="table-responsive">
           <Table hover bordered align="middle">
             <thead className="table-light">
@@ -203,16 +240,17 @@ export default function Usuarios() {
                 <th>RUT</th>
                 <th>Teléfono</th>
                 <th>Licencia</th>
-                <th>Depto.</th>
+                <th>Departamento</th>
                 <th>Rol</th>
                 <th>Activo</th>
                 <th>Acciones</th>
               </tr>
             </thead>
+
             <tbody>
-              {usuarios.map((u, index) => (
+              {usuarios.map((u, i) => (
                 <tr key={u.id}>
-                  <td>{index + 1}</td>
+                  <td>{i + 1}</td>
                   <td>{u.username}</td>
                   <td>{u.nombre}</td>
                   <td>{u.correo}</td>
@@ -222,7 +260,8 @@ export default function Usuarios() {
                   <td>{u.departamento || "-"}</td>
                   <td>{u.rol}</td>
                   <td>{u.activo ? "Sí" : "No"}</td>
-                  <td>
+
+                  <td className="text-center">
                     <Button
                       size="sm"
                       variant="outline-primary"
@@ -231,6 +270,7 @@ export default function Usuarios() {
                     >
                       Editar
                     </Button>
+
                     <Button
                       size="sm"
                       variant="outline-warning"
@@ -239,6 +279,7 @@ export default function Usuarios() {
                     >
                       Clave
                     </Button>
+
                     <Button
                       size="sm"
                       variant="outline-danger"
@@ -249,9 +290,10 @@ export default function Usuarios() {
                   </td>
                 </tr>
               ))}
+
               {!usuarios.length && (
                 <tr>
-                  <td colSpan="11" className="text-center text-muted">
+                  <td colSpan="11" className="text-center text-muted py-3">
                     Sin usuarios registrados
                   </td>
                 </tr>
@@ -261,42 +303,46 @@ export default function Usuarios() {
         </div>
       </div>
 
-      {/* MODAL FORMULARIO */}
+      {/* MODAL */}
       <Modal show={showModal} onHide={cerrarModal} centered size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
-            {form.id ? "Editar usuario" : "Nuevo usuario"}
+            {form.id ? "Editar Usuario" : "Nuevo Usuario"}
           </Modal.Title>
         </Modal.Header>
+
         <Modal.Body>
           <Form key={formKey}>
             <div className="row g-3">
+
               <div className="col-md-4">
                 <Form.Label>Usuario</Form.Label>
                 <Form.Control
                   value={form.username}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, username: e.target.value }))
+                    setForm((f) => ({ ...f, username: e.target.value }))
                   }
                   disabled={!!form.id}
                 />
               </div>
+
               <div className="col-md-4">
-                <Form.Label>Nombre y Apellido</Form.Label>
+                <Form.Label>Nombre completo</Form.Label>
                 <Form.Control
                   value={form.nombre}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, nombre: e.target.value }))
+                    setForm((f) => ({ ...f, nombre: e.target.value }))
                   }
                 />
               </div>
+
               <div className="col-md-4">
                 <Form.Label>Correo</Form.Label>
                 <Form.Control
                   type="email"
                   value={form.correo}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, correo: e.target.value }))
+                    setForm((f) => ({ ...f, correo: e.target.value }))
                   }
                 />
               </div>
@@ -306,8 +352,8 @@ export default function Usuarios() {
                 <Form.Control
                   value={form.rut}
                   onChange={handleRutChange}
-                  placeholder="12.345.678-9"
                   maxLength={12}
+                  placeholder="12.345.678-9"
                   isInvalid={!rutValido}
                 />
                 {!rutValido && (
@@ -320,7 +366,7 @@ export default function Usuarios() {
                 <Form.Control
                   value={form.direccion}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, direccion: e.target.value }))
+                    setForm((f) => ({ ...f, direccion: e.target.value }))
                   }
                 />
               </div>
@@ -330,19 +376,18 @@ export default function Usuarios() {
                 <Form.Control
                   value={form.telefono}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, telefono: e.target.value }))
+                    setForm((f) => ({ ...f, telefono: e.target.value }))
                   }
                 />
               </div>
 
               <div className="col-md-4">
-                <Form.Label>Clase de Licencia</Form.Label>
+                <Form.Label>Licencia</Form.Label>
                 <Form.Control
                   value={form.licencia}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, licencia: e.target.value }))
+                    setForm((f) => ({ ...f, licencia: e.target.value }))
                   }
-                  placeholder="Ej: Clase B, A2, etc."
                 />
               </div>
 
@@ -351,7 +396,7 @@ export default function Usuarios() {
                 <Form.Select
                   value={form.departamento}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, departamento: e.target.value }))
+                    setForm((f) => ({ ...f, departamento: e.target.value }))
                   }
                 >
                   <option value="Municipalidad">Municipalidad</option>
@@ -364,7 +409,7 @@ export default function Usuarios() {
                 <Form.Select
                   value={form.rol}
                   onChange={(e) =>
-                    setForm((s) => ({ ...s, rol: e.target.value }))
+                    setForm((f) => ({ ...f, rol: e.target.value }))
                   }
                 >
                   <option value="Usuario">Usuario</option>
@@ -381,7 +426,10 @@ export default function Usuarios() {
                     type="password"
                     value={form.password}
                     onChange={(e) =>
-                      setForm((s) => ({ ...s, password: e.target.value }))
+                      setForm((f) => ({
+                        ...f,
+                        password: e.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -389,14 +437,24 @@ export default function Usuarios() {
             </div>
           </Form>
         </Modal.Body>
+
         <Modal.Footer>
           <Button variant="secondary" onClick={cerrarModal}>
             Cancelar
           </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={loading}>
+
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
             {loading ? (
               <>
-                <Spinner size="sm" animation="border" className="me-2" />
+                <Spinner
+                  size="sm"
+                  animation="border"
+                  className="me-2"
+                />
                 Guardando...
               </>
             ) : form.id ? (

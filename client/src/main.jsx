@@ -1,6 +1,8 @@
+// main.jsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
+
 import App from "./App.jsx";
 
 import Dashboard from "./pages/Dashboard.jsx";
@@ -16,12 +18,18 @@ import PrivateRoute from "./router/PrivateRoute.jsx";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles.css";
 
+// =========================
+// RUTAS PRINCIPALES
+// =========================
 const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
     children: [
+      // --- Login (público) ---
       { path: "login", element: <Login /> },
+
+      // --- Rutas privadas ---
       {
         element: <PrivateRoute />,
         children: [
@@ -34,10 +42,12 @@ const router = createBrowserRouter([
           { path: "usuarios", element: <Usuarios /> },
         ],
       },
+
+      // --- 404 ---
       {
         path: "*",
         element: (
-          <div className="alert alert-warning m-3">
+          <div className="alert alert-warning text-center m-3">
             Ruta no encontrada
           </div>
         ),

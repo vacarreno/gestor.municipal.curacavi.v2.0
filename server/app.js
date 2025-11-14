@@ -55,12 +55,13 @@ app.use(express.urlencoded({ extended: true }));
 // === CORS ===
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedDomains.includes(origin)) {
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedDomains.includes(origin)) {
         return callback(null, true);
       }
-      console.warn("❌ CORS bloqueado para:", origin);
-      callback(new Error("CORS no permitido: " + origin));
+      console.warn("❌ CORS bloqueado:", origin);
+      return callback(new Error("CORS no permitido"));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -68,16 +69,15 @@ app.use(
   })
 );
 
+
 // === PREFLIGHT ===
-app.use((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-    res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
-    return res.sendStatus(204);
-  }
-  next();
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+  res.sendStatus(204);
 });
+
 
 // === DEBUG LOCAL ===
 if (!isProd) {

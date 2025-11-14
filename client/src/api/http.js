@@ -1,39 +1,53 @@
 import axios from "axios";
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL +  "/";
-
+// ===============================
+// CONFIG AXIOS
+// ===============================
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 15000,
-  withCredentials: true,
+  baseURL: "https://curacavi-backend.onrender.com",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// Inyectar token
+// ===============================
+// INYECTAR TOKEN AUTOMÁTICAMENTE
+// ===============================
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Logout global
+// ===============================
+// LOGOUT GLOBAL (TOKEN EXPIRADO)
+// ===============================
 let redirecting = false;
 const autoLogout = () => {
   if (redirecting) return;
   redirecting = true;
+
   sessionStorage.removeItem("token");
   sessionStorage.removeItem("user");
+
   window.location.href = "/login?expired=1";
 };
 
-// Manejo de errores
+// ===============================
+// MANEJO DE ERRORES
+// ===============================
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     const status = err?.response?.status;
 
+    // Token inválido o expirado
     if (status === 401) autoLogout();
+
+    // Backend no responde
     if (!err.response) return Promise.reject("Servidor no disponible");
 
+    // Mensaje corporativo unificado
     const msg =
       err.response.data?.message ||
       err.response.data?.error ||
@@ -43,4 +57,7 @@ api.interceptors.response.use(
   }
 );
 
+// ===============================
+// EXPORT
+// ===============================
 export default api;
