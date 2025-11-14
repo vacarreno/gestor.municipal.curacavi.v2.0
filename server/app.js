@@ -65,13 +65,12 @@ app.use(
   })
 );
 
-// === PREFLIGHT (Express 5 OK) ===
-// ⚠️ IMPORTANT: Express 5 YA NO ACEPTA "*", debe ser /(.*)
-app.options("/(.*)", (req, res) => {
+// === PREFLIGHT EXPRESS 5 ===
+app.options("*", (req, res) => {
   res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
-  res.sendStatus(204);
+  return res.sendStatus(204);
 });
 
 // === DEBUG LOCAL ===
@@ -99,18 +98,12 @@ app.get("/", (_, res) => {
     api: "Gestor Municipal API",
     env: NODE_ENV,
     db: process.env.DB_NAME,
-    client: isProd
-      ? process.env.REMOTE_CLIENT_APP
-      : process.env.LOCAL_CLIENT_APP,
-    server: isProd
-      ? process.env.REMOTE_SERVER_API
-      : process.env.LOCAL_SERVER_API,
     time: new Date().toISOString(),
   });
 });
 
-// === CATCH-ALL (Express 5 OK, sin "*") ===
-app.use("/(.*)", (req, res) => {
+// === CATCH-ALL (Express 5 OK) ===
+app.use("*", (req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
 
