@@ -41,7 +41,7 @@ const router = createBrowserRouter([
           { path: "inspeccion", element: <Inspeccion /> },
           { path: "reportes", element: <Reportes /> },
           { path: "usuarios", element: <Usuarios /> },
-          { path: "mantrenciones", element: <Mantenciones /> },
+          { path: "mantenciones", element: <Mantenciones /> },
         ],
       },
 
