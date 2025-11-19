@@ -9,6 +9,15 @@ const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
+// aceptar token por query
+router.use((req, res, next) => {
+  if (req.query.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+});
+
+/* ========== RUTA PDF ========== */
 router.get("/:id/pdf", auth, async (req, res) => {
   const { id } = req.params;
 

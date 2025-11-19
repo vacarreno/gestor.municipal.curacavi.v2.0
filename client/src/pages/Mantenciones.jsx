@@ -156,9 +156,11 @@ export default function Mantenciones() {
 
   // ======================= PDF ===============================
   const verPDF = (id) => {
-    const url = `https://curacavi-backend.onrender.com/mantenciones/${id}/pdf`;
-    window.open(url, "_blank");
-  };
+  const token = sessionStorage.getItem("token");
+  const url = `https://curacavi-backend.onrender.com/mantenciones/${id}/pdf?token=${token}`;
+  window.open(url, "_blank");
+};
+
 
   // ======================= UI PRINCIPAL =========================
   return (
