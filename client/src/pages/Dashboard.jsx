@@ -31,7 +31,7 @@ export default function Dashboard() {
         const [usr, veh, cond, insp] = await Promise.all([
           api.get("/usuarios"),
           api.get("/vehiculos"),
-          api.get("/usuarios/conductores"),
+          api.get("/conductores"),
           api.get("/inspecciones"),
         ]);
 
