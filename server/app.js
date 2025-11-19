@@ -19,7 +19,7 @@ const allowedDomains = [
 
 // === APP EXPRESS ===
 const app = express();
-
+app.set("trust proxy", 1);
 // === LOGGING ===
 app.use(morgan(isProd ? "combined" : "dev"));
 
@@ -75,6 +75,7 @@ app.options("/:path(*)", (req, res) => {
 });
 
 
+
 // === DEBUG LOCAL ===
 if (!isProd) {
   app.use((req, _, next) => {
@@ -105,7 +106,7 @@ app.get("/", (_, res) => {
 });
 
 // === CATCH-ALL (Express 5 OK) ===
-app.use("*", (req, res) => {
+app.use("/:path(*)", (req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
 
