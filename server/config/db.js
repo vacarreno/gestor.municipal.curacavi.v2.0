@@ -10,16 +10,13 @@ if (!process.env.DATABASE_URL) {
 
 console.log("🔌 Conectando a PostgreSQL...");
 
-const pool = new Pool({
+const db = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false, // Render requiere SSL
-  },
+  ssl: { rejectUnauthorized: false },
 });
 
 // Test de conexión
-pool
-  .connect()
+db.connect()
   .then((client) => {
     console.log("✅ PostgreSQL conectado correctamente");
     client.release();
@@ -28,4 +25,4 @@ pool
     console.error("❌ Error PostgreSQL:", err);
   });
 
-module.exports = pool;
+module.exports = { db };

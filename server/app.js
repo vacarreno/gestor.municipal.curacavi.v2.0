@@ -8,6 +8,7 @@ const compression = require("compression");
 require("dotenv").config();
 const { db } = require("./config/db");
 
+
 const NODE_ENV = process.env.NODE_ENV || "development";
 const isProd = NODE_ENV === "production";
 
@@ -66,12 +67,13 @@ app.use(
 );
 
 // === PREFLIGHT EXPRESS 5 ===
-app.options("/*", (req, res) => {
+app.options("/:path(*)", (req, res) => {
   res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
   return res.sendStatus(204);
 });
+
 
 // === DEBUG LOCAL ===
 if (!isProd) {
