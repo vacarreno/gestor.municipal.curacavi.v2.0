@@ -1,20 +1,21 @@
 // routes/mantencionesPdfRoutes.js
 const express = require("express");
 const path = require("path");
-const fs = require("fs/promises");
 const PDFDocument = require("pdfkit");
 const { db } = require("../config/db");
 const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// === GENERAR PDF DE MANTENCIÓN CON DETALLE ===
+/* ============================================================
+   ============ GENERAR PDF DE MANTENCIÓN ======================
+   ============================================================ */
 router.get("/:id/pdf", auth, async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
-    // === CONSULTA PRINCIPAL (POSTGRESQL) ===
-    const result = await db.query(
+    /* ================= CONSULTA PRINCIPAL ================= */
+    const { rows: mantRows } = await db.query(
       `
       SELECT 
         m.*, 
@@ -29,25 +30,23 @@ router.get("/:id/pdf", auth, async (req, res) => {
       [id]
     );
 
-    if (result.rows.length === 0)
+    if (!mantRows.length)
       return res.status(404).send("Mantención no encontrada");
 
-    const data = result.rows[0];
+    const data = mantRows[0];
 
-    // === DETALLES (POSTGRESQL) ===
-    const itemsResult = await db.query(
+    /* ================= DETALLE DE ÍTEMS ================= */
+    const { rows: items } = await db.query(
       `
-      SELECT item, tipo, cantidad, costo_unitario, 
-             (cantidad * costo_unitario) AS subtotal
+      SELECT item, tipo, cantidad, costo_unitario,
+             cantidad * costo_unitario AS subtotal
       FROM mantencion_items
       WHERE mantencion_id = $1
       `,
       [id]
     );
 
-    const items = itemsResult.rows;
-
-    // === CONFIGURACIÓN PDF ===
+    /* ================= CONFIG PDF ================= */
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
@@ -62,19 +61,18 @@ router.get("/:id/pdf", auth, async (req, res) => {
 
     doc.pipe(res);
 
-    // === LOGO MUNICIPALIDAD ===
     const logoPath = path.join(__dirname, "../public/logo-curacavi.png");
 
-    // === ENCABEZADO ===
-    const drawHeader = (currentPage, totalPages) => {
+    /* ================= HEADER GLOBAL ================= */
+    const drawHeader = (current, total) => {
       const L = doc.page.margins.left;
-      const usableWidth =
-        doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const W = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
       try {
-        const fsSync = require("fs");
-        if (fsSync.existsSync(logoPath))
+        const fs = require("fs");
+        if (fs.existsSync(logoPath)) {
           doc.image(logoPath, L, 25, { width: 60 });
+        }
       } catch {}
 
       doc
@@ -84,46 +82,37 @@ router.get("/:id/pdf", auth, async (req, res) => {
         .text("MUNICIPALIDAD DE CURACAVÍ", L + 80, 30)
         .fontSize(10)
         .fillColor("#000")
-        .text("Dirección de Operaciones, Departamento de Movilización.", L + 80, 45);
+        .text("Dirección de Operaciones — Departamento de Movilización", L + 80, 45);
 
       doc
         .moveTo(L, 65)
-        .lineTo(L + usableWidth, 65)
+        .lineTo(L + W, 65)
         .strokeColor("#003366")
         .lineWidth(1)
         .stroke();
-
-      doc.moveDown(1);
 
       doc
         .font("Helvetica-Bold")
         .fontSize(14)
         .fillColor("#003366")
-        .text("INFORME DE MANTENCIÓN VEHICULAR", L);
+        .text("INFORME DE MANTENCIÓN VEHICULAR", L, 75);
 
       doc
         .font("Helvetica")
         .fontSize(9)
         .fillColor("#666")
-        .text(`Página ${currentPage} de ${totalPages}`, L, doc.y + 2);
-
-      doc.moveDown(0.5);
+        .text(`Página ${current} de ${total}`, L, 95);
     };
 
-    // === CONTENIDO ===
+    /* ================= CONTENIDO ================= */
     drawHeader(1, 1);
+
     const L = doc.page.margins.left;
 
-    doc.moveDown(2)
-      .font("Helvetica-Bold")
-      .fillColor("#003366")
-      .text("Datos Generales", L);
-
-    doc
-      .font("Helvetica")
-      .fillColor("#000")
-      .fontSize(10)
-      .moveDown(0.5);
+    // DATOS GENERALES
+    doc.moveDown(3);
+    doc.font("Helvetica-Bold").fontSize(12).fillColor("#003366").text("Datos Generales", L);
+    doc.font("Helvetica").fontSize(10).fillColor("#000").moveDown(0.7);
 
     doc.text(`ID Mantención: ${id}`);
     doc.text(`Vehículo: ${data.vehiculo} (${data.numero_interno})`);
@@ -135,35 +124,29 @@ router.get("/:id/pdf", auth, async (req, res) => {
         timeStyle: "short",
       })}`
     );
-    doc.text(
-      `Costo total: $${Number(data.costo || 0).toLocaleString("es-CL")}`
-    );
+    doc.text(`Costo total: $${Number(data.costo || 0).toLocaleString("es-CL")}`);
 
+    // OBSERVACIONES
     doc.moveDown(1.5);
+    doc.font("Helvetica-Bold").fontSize(12).fillColor("#003366").text("Observaciones", L);
+    doc.font("Helvetica").fontSize(10).fillColor("#000").moveDown(0.5);
+    doc.text(data.observacion || "Sin observaciones registradas.", {
+      width: 480,
+    });
 
-    doc.font("Helvetica-Bold")
-      .fillColor("#003366")
-      .text("Observaciones", L);
-
-    doc
-      .font("Helvetica")
-      .fontSize(10)
-      .fillColor("#000")
-      .moveDown(0.5)
-      .text(data.observacion || "Sin observaciones registradas.");
-
+    /* ================= TABLA DETALLE ================= */
     doc.moveDown(2);
 
-    // === TABLA ===
-    if (items.length > 0) {
-      doc.font("Helvetica-Bold")
+    if (items.length) {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(12)
         .fillColor("#003366")
         .text("Detalle de Tareas y Repuestos", L);
-      doc.moveDown(0.5);
+
+      doc.moveDown(0.7);
 
       const startX = L;
-      let y = doc.y;
-
       const colWidths = [160, 70, 60, 80, 80];
       const headers = [
         "Ítem / Descripción",
@@ -174,60 +157,58 @@ router.get("/:id/pdf", auth, async (req, res) => {
       ];
       const rowHeight = 18;
 
-      // Header tabla
-      doc
-        .rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
+      let y = doc.y;
+
+      // HEADER TABLA
+      doc.rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
         .fillAndStroke("#003366", "#003366");
 
       doc.fillColor("#FFF").font("Helvetica-Bold").fontSize(10);
       let x = startX;
+
       headers.forEach((h, i) => {
         doc.text(h, x + 5, y + 4, { width: colWidths[i] - 10 });
         x += colWidths[i];
       });
 
       y += rowHeight;
+
       doc.font("Helvetica").fontSize(9).fillColor("#000");
 
       let total = 0;
 
-      for (const [index, it] of items.entries()) {
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+
+        // NUEVA PÁGINA SI ES NECESARIO
         if (y > doc.page.height - 120) {
           doc.addPage();
           y = doc.page.margins.top + 20;
-          drawHeader(1, 1);
+          drawHeader(1, 1); // luego será corregido en bufferPages
         }
 
-        const fillColor = index % 2 === 0 ? "#F9F9F9" : "#FFFFFF";
+        const bg = i % 2 === 0 ? "#F9F9F9" : "#FFFFFF";
 
-        doc
-          .rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
-          .fillAndStroke(fillColor, "#CCCCCC");
+        doc.rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
+          .fillAndStroke(bg, "#CCCCCC");
 
-        x = startX;
-        doc.text(it.item, x + 5, y + 4, { width: colWidths[0] - 10 });
-        x += colWidths[0];
+        let colX = startX;
 
-        doc.text(it.tipo || "-", x + 5, y + 4, { width: colWidths[1] - 10 });
-        x += colWidths[1];
+        doc.text(it.item, colX + 5, y + 4, { width: colWidths[0] - 10 });
+        colX += colWidths[0];
 
-        doc.text(it.cantidad || "-", x + 5, y + 4, { width: colWidths[2] - 10 });
-        x += colWidths[2];
+        doc.text(it.tipo || "-", colX + 5, y + 4);
+        colX += colWidths[1];
 
-        doc.text(
-          `$${Number(it.costo_unitario).toLocaleString("es-CL")}`,
-          x + 5,
-          y + 4,
-          { width: colWidths[3] - 10 }
-        );
-        x += colWidths[3];
+        doc.text(it.cantidad || "-", colX + 5, y + 4);
+        colX += colWidths[2];
 
-        doc.text(
-          `$${Number(it.subtotal).toLocaleString("es-CL")}`,
-          x + 5,
-          y + 4,
-          { width: colWidths[4] - 10 }
-        );
+        doc.text(`$${Number(it.costo_unitario).toLocaleString("es-CL")}`,
+          colX + 5, y + 4);
+        colX += colWidths[3];
+
+        doc.text(`$${Number(it.subtotal).toLocaleString("es-CL")}`,
+          colX + 5, y + 4);
 
         y += rowHeight;
         total += Number(it.subtotal || 0);
@@ -235,14 +216,15 @@ router.get("/:id/pdf", auth, async (req, res) => {
 
       doc
         .font("Helvetica-Bold")
+        .fontSize(11)
         .fillColor("#000")
-        .text(`TOTAL: $${total.toLocaleString("es-CL")}`, startX + 290, y + 10);
+        .text(`TOTAL: $${total.toLocaleString("es-CL")}`, startX + 290, y + 12);
 
     } else {
       doc.text("Sin registro de tareas ni repuestos asociados.", L);
     }
 
-    // === FIRMAS ===
+    /* ================= FIRMAS ================= */
     doc.moveDown(4);
     doc.text("_____________________________", L);
     doc.text("Firma Responsable", L + 15, doc.y + 12);
@@ -250,11 +232,12 @@ router.get("/:id/pdf", auth, async (req, res) => {
     doc.text("_____________________________", L + 250, doc.y - 12);
     doc.text("Supervisor", L + 270, doc.y + 12);
 
-    // === PÁGINAS ===
-    const range = doc.bufferedPageRange();
-    for (let i = range.start; i < range.start + range.count; i++) {
+    /* ================= PAGINACIÓN ================= */
+    const pages = doc.bufferedPageRange();
+
+    for (let i = pages.start; i < pages.start + pages.count; i++) {
       doc.switchToPage(i);
-      drawHeader(i - range.start + 1, range.count);
+      drawHeader(i - pages.start + 1, pages.count);
     }
 
     doc.end();

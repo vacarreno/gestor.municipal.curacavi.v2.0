@@ -42,6 +42,7 @@ const router = createBrowserRouter([
           { path: "reportes", element: <Reportes /> },
           { path: "usuarios", element: <Usuarios /> },
           { path: "mantenciones", element: <Mantenciones /> },
+          
         ],
       },
 
