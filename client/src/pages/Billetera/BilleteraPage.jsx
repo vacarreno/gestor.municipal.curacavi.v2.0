@@ -71,9 +71,10 @@ export default function BilleteraPage() {
                   <td>{v.telefono}</td>
                   <td className="fw-bold text-success">${v.saldo_actual}</td>
 
+                  {/* === CORRECCIÓN: v.qr_url no existe === */}
                   <td>
-                    {v.qr_url ? (
-                      <img src={v.qr_url} className="qr-small" alt="QR" />
+                    {v.qr_token ? (
+                      <span className="text-success fw-bold">{v.qr_token}</span>
                     ) : (
                       <span className="text-muted">No generado</span>
                     )}

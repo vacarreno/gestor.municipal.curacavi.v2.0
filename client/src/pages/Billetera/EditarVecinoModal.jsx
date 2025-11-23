@@ -5,7 +5,7 @@ export default function EditarVecinoModal({ vecino, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(vecino.id, monto);
+    onSave(vecino.id, Number(monto)); // ← corrección segura
     onClose();
   };
 
