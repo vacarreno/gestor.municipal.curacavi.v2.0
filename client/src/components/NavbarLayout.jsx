@@ -12,12 +12,13 @@ import {
   PersonCircle,
   Wrench,
   Wallet,
+  Wallet2,
 } from "react-bootstrap-icons";
 
 export default function NavbarLayout() {
   const [navOpen, setNavOpen] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);        // Configuración Admin
-  const [showBilletera, setShowBilletera] = useState(false);  // Configuración Billetera
+  const [showConfig, setShowConfig] = useState(false); // Configuración Admin
+  const [showBilletera, setShowBilletera] = useState(false); // Configuración Billetera
 
   // === USUARIO LOGUEADO ===
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
@@ -32,7 +33,6 @@ export default function NavbarLayout() {
 
   return (
     <div className={`app-shell ${navOpen ? "nav-open" : ""}`}>
-
       {/* BOTÓN MENÚ MÓVIL */}
       <button
         className="hamburger btn btn-light btn-sm"
@@ -65,7 +65,6 @@ export default function NavbarLayout() {
         </div>
 
         <nav className="d-grid gap-2" onClick={() => setNavOpen(false)}>
-
           {/* === Dashboard === */}
           <NavLink
             to="/dashboard"
@@ -142,7 +141,7 @@ export default function NavbarLayout() {
           )}
 
           {/* === Billetera (Solo Administrador de Billetera) === */}
-          {(rol === "adminbilletera" || rol === "admin" )   && (
+          {(rol === "adminbilletera" || rol === "admin") && (
             <div className="config-menu mt-2">
               <button
                 type="button"
@@ -166,7 +165,7 @@ export default function NavbarLayout() {
                       }`
                     }
                   >
-                    <Wallet /> Gestión de Billetera
+                    <Wallet2 /> Gestión de Billetera
                   </NavLink>
                 </div>
               )}
@@ -215,7 +214,6 @@ export default function NavbarLayout() {
 
       {/* CONTENEDOR PRINCIPAL */}
       <div className="d-flex flex-column">
-
         <header className="header p-2 px-3 d-flex align-items-center justify-content-between border-bottom bg-light">
           <div className="text-muted small">
             Backend: https://curacavi-backend.onrender.com
@@ -242,7 +240,8 @@ export default function NavbarLayout() {
         </main>
 
         <footer className="footer p-2 px-3 text-center text-muted small">
-          © {new Date().getFullYear()} GESTOR MUNICIPAL — I. Municipalidad de Curacaví
+          © {new Date().getFullYear()} GESTOR MUNICIPAL — I. Municipalidad de
+          Curacaví
         </footer>
       </div>
     </div>
