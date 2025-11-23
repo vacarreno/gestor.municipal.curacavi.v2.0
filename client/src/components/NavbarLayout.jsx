@@ -151,7 +151,7 @@ export default function NavbarLayout() {
                   fontWeight: "bold",
                 }}
               >
-                <Wallet /> BilleteraPage
+                <Wallet /> Billetera
               </button>
 
               {showBilletera && (
