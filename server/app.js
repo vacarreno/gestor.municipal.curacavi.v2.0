@@ -109,6 +109,9 @@ app.use("/mantenciones", require("./routes/mantencionesRoutes"));
 // --- Reportes ---
 app.use("/reportes", require("./routes/reportesRoutes"));
 
+// --- Billetera Vecinal (NUEVO) ---
+app.use("/billetera", require("./routes/billeteraRoutes"));  
+
 // ========================================================
 // ====================== HEALTHCHECK =====================
 // ========================================================
