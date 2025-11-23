@@ -166,7 +166,7 @@ export default function NavbarLayout() {
                       }`
                     }
                   >
-                    <PersonFillWallet /> Gestión de Billetera
+                    <Wallet /> Gestión de Billetera
                   </NavLink>
                 </div>
               )}
