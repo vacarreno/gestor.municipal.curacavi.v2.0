@@ -140,7 +140,7 @@ export default function NavbarLayout() {
           )}
 
           {/* === Billetera (Solo Administrador de Billetera) === */}
-          {rol === "adminbilletera" && (
+          {(rol === "adminbilletera" || rol === "admin" )   && (
             <div className="config-menu mt-2">
               <button
                 type="button"
