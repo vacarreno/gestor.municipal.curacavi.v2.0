@@ -8,7 +8,6 @@ import {
   ClipboardCheck,
   Gear,
   PersonFillGear,
-  PersonFillWallet,
   PersonCircle,
   Wrench,
   Wallet,
