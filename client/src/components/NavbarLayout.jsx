@@ -10,6 +10,7 @@ import {
   PersonFillGear,
   PersonCircle,
   Wrench,
+  Wallet,
 } from "react-bootstrap-icons";
 
 export default function NavbarLayout() {
@@ -151,7 +152,7 @@ export default function NavbarLayout() {
                   fontWeight: "bold",
                 }}
               >
-                <Gear /> Billetera
+                <Wallet /> Billetera
               </button>
 
               {showBilletera && (
