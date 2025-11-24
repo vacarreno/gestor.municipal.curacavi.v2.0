@@ -4,7 +4,7 @@ const path = require("path");
 const PDFDocument = require("pdfkit");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
-const db = require("../config/db");                 // FIX IMPORTACIÓN
+const { db } = require("../config/db");
 const authOptional = require("../middleware/authOptional"); // FIX IMPORTACIÓN
 
 const router = express.Router();

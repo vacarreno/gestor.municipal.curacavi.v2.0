@@ -1,6 +1,6 @@
 // routes/inspeccionRoutes.js
 const express = require("express");
-const db = require("../config/db");          // FIX 1
+const { db } = require("../config/db");
 const auth = require("../middleware/auth");  // FIX 2
 
 const router = express.Router();

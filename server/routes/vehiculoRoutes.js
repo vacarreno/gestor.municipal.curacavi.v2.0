@@ -3,7 +3,6 @@ const express = require("express");
 const { db } = require("../config/db");
 const auth = require("../middleware/auth");
 
-
 const router = express.Router();
 
 /* ============================================================
@@ -116,12 +115,7 @@ router.put("/:id", auth, async (req, res) => {
       SET numero_interno=$1, patente=$2, kilometro=$3
       WHERE id=$4
       `,
-      [
-        numero_interno.trim(),
-        patente.trim().toUpperCase(),
-        kilometro || 0,
-        id,
-      ]
+      [numero_interno.trim(), patente.trim().toUpperCase(), kilometro || 0, id]
     );
 
     res.json({ ok: true, updated: result.rowCount });
@@ -139,10 +133,9 @@ router.delete("/:id", auth, async (req, res) => {
 
   try {
     // Validar si existe
-    const exists = await db.query(
-      `SELECT id FROM vehiculos WHERE id=$1`,
-      [vehiculoId]
-    );
+    const exists = await db.query(`SELECT id FROM vehiculos WHERE id=$1`, [
+      vehiculoId,
+    ]);
 
     if (!exists.rows.length) {
       return res.status(404).json({ message: "Vehículo no encontrado" });
