@@ -1,4 +1,6 @@
-// config/db.js
+// =========================
+//  PostgreSQL - Render.com
+// =========================
 const { Pool } = require("pg");
 
 if (!process.env.DATABASE_URL) {
@@ -8,13 +10,13 @@ if (!process.env.DATABASE_URL) {
 
 console.log("🔌 Conectando a PostgreSQL...");
 
-const pool = new Pool({
+const db = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 
-// Test
-pool.connect()
+// Test de conexión inicial
+db.connect()
   .then((client) => {
     console.log("✅ PostgreSQL conectado correctamente");
     client.release();
@@ -23,5 +25,6 @@ pool.connect()
     console.error("❌ Error PostgreSQL:", err);
   });
 
-module.exports = { db: pool };
-
+// Export correctísimo para las rutas:
+// const { db } = require("../config/db")
+module.exports = { db };
