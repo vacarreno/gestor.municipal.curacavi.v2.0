@@ -38,6 +38,7 @@ router.get("/", auth, async (req, res) => {
     });
 
     res.json(mantenciones);
+
   } catch (err) {
     console.error("❌ Error listando mantenciones:", err);
     res.status(500).json({ message: "Error al listar mantenciones" });
@@ -85,6 +86,7 @@ router.get("/:id", auth, async (req, res) => {
     mantencion.items = itemsResult.rows;
 
     res.json(mantencion);
+
   } catch (err) {
     console.error("❌ Error obteniendo mantención:", err);
     res.status(500).json({ message: "Error al obtener mantención" });
@@ -98,6 +100,10 @@ router.post("/", auth, async (req, res) => {
   const { vehiculo_id, usuario_id, tipo, observacion, costo, items = [] } =
     req.body;
 
+  if (!vehiculo_id || !tipo) {
+    return res.status(400).json({ message: "vehiculo_id y tipo son obligatorios" });
+  }
+
   const client = await db.connect();
 
   try {
@@ -110,7 +116,13 @@ router.post("/", auth, async (req, res) => {
       VALUES ($1, $2, $3, $4, $5, NOW())
       RETURNING id
       `,
-      [vehiculo_id, usuario_id || null, tipo, observacion || "", costo || 0]
+      [
+        vehiculo_id,
+        usuario_id || null,
+        tipo,
+        observacion || "",
+        Number(costo) || 0,
+      ]
     );
 
     const mantencionId = mantResult.rows[0].id;
@@ -128,8 +140,8 @@ router.post("/", auth, async (req, res) => {
           mantencionId,
           i.item,
           i.tipo || "Tarea",
-          i.cantidad || 1,
-          i.costo_unitario || 0
+          Number(i.cantidad) || 1,
+          Number(i.costo_unitario) || 0
         );
       });
 
@@ -149,6 +161,7 @@ router.post("/", auth, async (req, res) => {
       id: mantencionId,
       message: "Mantención creada correctamente",
     });
+
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Error creando mantención:", err);
@@ -182,7 +195,7 @@ router.put("/:id", auth, async (req, res) => {
         usuario_id || null,
         tipo,
         observacion || "",
-        costo || 0,
+        Number(costo) || 0,
         id,
       ]
     );
@@ -204,8 +217,8 @@ router.put("/:id", auth, async (req, res) => {
           id,
           i.item,
           i.tipo || "Tarea",
-          i.cantidad || 1,
-          i.costo_unitario || 0
+          Number(i.cantidad) || 1,
+          Number(i.costo_unitario) || 0
         );
       });
 
@@ -222,6 +235,7 @@ router.put("/:id", auth, async (req, res) => {
     await client.query("COMMIT");
 
     res.json({ message: "Mantención actualizada correctamente" });
+
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Error actualizando mantención:", err);
@@ -240,6 +254,7 @@ router.delete("/:id", auth, async (req, res) => {
   try {
     await db.query("DELETE FROM mantenciones WHERE id=$1", [id]);
     res.json({ message: "Mantención eliminada correctamente" });
+
   } catch (err) {
     console.error("❌ Error eliminando mantención:", err);
     res.status(500).json({ message: "Error al eliminar mantención" });

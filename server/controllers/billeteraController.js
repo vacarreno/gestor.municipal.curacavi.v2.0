@@ -32,6 +32,10 @@ async function updateSaldo(req, res) {
     const { id } = req.params;
     const { monto } = req.body;
 
+    if (!monto && monto !== 0) {
+      return res.status(400).json({ error: "Monto requerido" });
+    }
+
     const sql = `
       UPDATE vecinos
       SET saldo = $1
@@ -40,6 +44,11 @@ async function updateSaldo(req, res) {
     `;
 
     const { rows } = await pool.query(sql, [monto, id]);
+
+    // Validación: vecino no existe
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Vecino no encontrado" });
+    }
 
     res.json(rows[0]);
   } catch (err) {
@@ -69,6 +78,11 @@ async function regenerarQR(req, res) {
     `;
 
     const { rows } = await pool.query(sql, [qr_secret, qr_url, id]);
+
+    // Validación: vecino no existe
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Vecino no encontrado" });
+    }
 
     res.json(rows[0]);
   } catch (err) {

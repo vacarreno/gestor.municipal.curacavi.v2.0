@@ -4,8 +4,8 @@ const path = require("path");
 const PDFDocument = require("pdfkit");
 const QRCode = require("qrcode");
 const crypto = require("crypto");
-const { db } = require("../config/db");
-const { authOptional } = require("../middleware/authOptional"); // NUEVO: Permite token por query
+const db = require("../config/db");                 // FIX IMPORTACIÓN
+const authOptional = require("../middleware/authOptional"); // FIX IMPORTACIÓN
 
 const router = express.Router();
 
@@ -52,7 +52,7 @@ router.get("/:id/pdf", authOptional, async (req, res) => {
     /* ================= FOLIO ÚNICO ================= */
     const folio = crypto.randomBytes(8).toString("hex").toUpperCase();
 
-    /* ================= HASH DE INTEGRIDAD ================= */
+    /* ================= HASH ================= */
     const hash = crypto
       .createHash("sha256")
       .update(JSON.stringify({ data, items }))
@@ -92,9 +92,7 @@ Hash: ${hash}
     doc.fontSize(60)
       .fillColor("#CCCCCC")
       .opacity(0.15)
-      .text("MUNICIPALIDAD DE CURACAVÍ", 80, 280, {
-        angle: 30,
-      });
+      .text("MUNICIPALIDAD DE CURACAVÍ", 80, 280, { angle: 30 });
     doc.restore();
 
     /* ================= ENCABEZADO ================= */
@@ -109,7 +107,6 @@ Hash: ${hash}
         }
       } catch {}
 
-      // TITULOS
       doc.font("Helvetica-Bold")
         .fontSize(14)
         .fillColor("#003366")
@@ -122,7 +119,6 @@ Hash: ${hash}
           38
         );
 
-      // LÍNEA
       doc.moveTo(L, 60)
         .lineTo(doc.page.width - L, 60)
         .strokeColor("#003366")
@@ -133,13 +129,11 @@ Hash: ${hash}
         .fillColor("#003366")
         .text("INFORME DE MANTENCIÓN VEHICULAR", L, 75);
 
-      // Paginación
       doc.font("Helvetica")
         .fontSize(9)
         .fillColor("#666")
         .text(`Página ${current} de ${total}`, L, 95);
 
-      // QR
       doc.image(qrDataURL, doc.page.width - 120, 20, { width: 80 });
     };
 
@@ -148,7 +142,6 @@ Hash: ${hash}
 
     const L = doc.page.margins.left;
 
-    // DATOS GENERALES
     doc.moveDown(3);
     doc.font("Helvetica-Bold")
       .fontSize(12)
@@ -167,20 +160,15 @@ Hash: ${hash}
         timeStyle: "short",
       })}`
     );
-    doc.text(
-      `Costo total: $${Number(data.costo || 0).toLocaleString("es-CL")}`
-    );
+
+    doc.text(`Costo total: $${Number(data.costo || 0).toLocaleString("es-CL")}`);
 
     /* ================= OBSERVACIONES ================= */
     doc.moveDown(2);
-    doc.font("Helvetica-Bold")
-      .fontSize(12)
-      .fillColor("#003366")
+    doc.font("Helvetica-Bold").fontSize(12).fillColor("#003366")
       .text("Observaciones", L);
 
-    doc.font("Helvetica")
-      .fontSize(10)
-      .fillColor("#000")
+    doc.font("Helvetica").fontSize(10).fillColor("#000")
       .moveDown(0.7)
       .text(data.observacion || "Sin observaciones registradas.", {
         width: 480,
@@ -269,14 +257,16 @@ Hash: ${hash}
       doc.text("Sin ítems registrados.", L);
     }
 
-    /* ================= PIE – FOLIO & HASH ================= */
+    /* ================= PIE – HASH ================= */
     doc.moveDown(3);
     doc.font("Helvetica-Bold")
       .fontSize(10)
       .text(`Folio interno: ${folio}`);
+
     doc.font("Helvetica")
       .fontSize(9)
       .text(`Hash de integridad: ${hash}`);
+
     doc.text("Documento generado automáticamente por Gestor Municipal Curacaví");
 
     /* ================= PAGINACIÓN REAL ================= */
@@ -287,6 +277,7 @@ Hash: ${hash}
     }
 
     doc.end();
+
   } catch (err) {
     console.error("❌ Error PDF:", err);
     res.status(500).send("Error al generar PDF");

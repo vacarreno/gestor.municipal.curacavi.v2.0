@@ -1,7 +1,7 @@
 // routes/empleadoRoutes.js
 const express = require("express");
-const { db } = require("../config/db");
-const { auth } = require("../middleware/auth");
+const db = require("../config/db");               // FIX
+const auth = require("../middleware/auth");       // FIX
 
 const router = express.Router();
 

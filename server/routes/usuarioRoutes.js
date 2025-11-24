@@ -6,9 +6,9 @@ const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// ============================================================
-// =============== OBTENER TODOS LOS USUARIOS =================
-// ============================================================
+/* ============================================================
+   =============== LISTAR TODOS LOS USUARIOS ===================
+   ============================================================ */
 router.get("/", auth, async (_req, res) => {
   try {
     const result = await db.query(`
@@ -26,9 +26,9 @@ router.get("/", auth, async (_req, res) => {
   }
 });
 
-// ============================================================
-// ============ OBTENER CONDUCTORES ACTIVOS ===================
-// ============================================================
+/* ============================================================
+   ============ OBTENER CONDUCTORES ACTIVOS ====================
+   ============================================================ */
 router.get("/conductores", auth, async (_req, res) => {
   try {
     const result = await db.query(`
@@ -47,9 +47,9 @@ router.get("/conductores", auth, async (_req, res) => {
   }
 });
 
-// ============================================================
-// ==================== CREAR USUARIO =========================
-// ============================================================
+/* ============================================================
+   ======================== CREAR USUARIO ======================
+   ============================================================ */
 router.post("/", auth, async (req, res) => {
   const {
     username,
@@ -71,7 +71,17 @@ router.post("/", auth, async (req, res) => {
   }
 
   try {
-    const hash = await bcrypt.hash(password, 10);
+    /* --- Validación: evitar duplicados --- */
+    const exists = await db.query(
+      `SELECT id FROM usuarios WHERE username = $1 LIMIT 1`,
+      [username]
+    );
+
+    if (exists.rows.length > 0) {
+      return res.status(409).json({ message: "El usuario ya existe" });
+    }
+
+    const hash = await bcrypt.hash(password, 12);
 
     const result = await db.query(
       `
@@ -83,7 +93,7 @@ router.post("/", auth, async (req, res) => {
       RETURNING id
       `,
       [
-        username,
+        username.trim(),
         nombre || "",
         correo || "",
         rut || "",
@@ -103,9 +113,9 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-// ============================================================
-// ================ ACTUALIZAR USUARIO ========================
-// ============================================================
+/* ============================================================
+   ====================== ACTUALIZAR USUARIO ==================
+   ============================================================ */
 router.put("/:id", auth, async (req, res) => {
   const {
     nombre,
@@ -120,6 +130,16 @@ router.put("/:id", auth, async (req, res) => {
   } = req.body || {};
 
   try {
+    /* Valida si existe */
+    const exists = await db.query(
+      `SELECT id FROM usuarios WHERE id=$1 LIMIT 1`,
+      [req.params.id]
+    );
+
+    if (!exists.rows.length) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
     await db.query(
       `
       UPDATE usuarios SET
@@ -155,9 +175,9 @@ router.put("/:id", auth, async (req, res) => {
   }
 });
 
-// ============================================================
-// ================== CAMBIAR CONTRASEÑA ======================
-// ============================================================
+/* ============================================================
+   ==================== CAMBIAR CONTRASEÑA ====================
+   ============================================================ */
 router.put("/:id/password", auth, async (req, res) => {
   const { password } = req.body || {};
 
@@ -166,7 +186,17 @@ router.put("/:id/password", auth, async (req, res) => {
   }
 
   try {
-    const hash = await bcrypt.hash(password, 10);
+    /* Validación: usuario existe */
+    const exists = await db.query(
+      `SELECT id FROM usuarios WHERE id=$1 LIMIT 1`,
+      [req.params.id]
+    );
+
+    if (!exists.rows.length) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
+    const hash = await bcrypt.hash(password, 12);
 
     await db.query(
       `UPDATE usuarios SET password_hash=$1 WHERE id=$2`,
@@ -180,12 +210,22 @@ router.put("/:id/password", auth, async (req, res) => {
   }
 });
 
-// ============================================================
-// ==================== ELIMINAR USUARIO ======================
-// ============================================================
+/* ============================================================
+   ========================= ELIMINAR ==========================
+   ============================================================ */
 router.delete("/:id", auth, async (req, res) => {
   try {
+    const exists = await db.query(
+      `SELECT id FROM usuarios WHERE id=$1 LIMIT 1`,
+      [req.params.id]
+    );
+
+    if (!exists.rows.length) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+
     await db.query("DELETE FROM usuarios WHERE id=$1", [req.params.id]);
+
     res.json({ ok: true });
   } catch (err) {
     console.error("❌ Error DELETE /usuarios/:id:", err);

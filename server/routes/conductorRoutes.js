@@ -1,8 +1,8 @@
 // routes/conductorRoutes.js
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const { db } = require("../config/db");
-const { auth } = require("../middleware/auth");
+const db = require("../config/db");     // FIX
+const auth = require("../middleware/auth");   // FIX
 
 const router = express.Router();
 
@@ -13,7 +13,7 @@ router.get("/", auth, async (_req, res) => {
       `
       SELECT id, username, nombre, correo, rol, activo
       FROM usuarios
-      WHERE rol = 'Conductor'
+      WHERE rol = 'conductor'
       ORDER BY id DESC
       `
     );
@@ -39,7 +39,7 @@ router.post("/", auth, async (req, res) => {
     const result = await db.query(
       `
       INSERT INTO usuarios (username, nombre, correo, rol, password_hash, activo)
-      VALUES ($1, $2, $3, 'Conductor', $4, 1)
+      VALUES ($1, $2, $3, 'conductor', $4, true)
       RETURNING id
       `,
       [username, nombre, correo, hash]
@@ -63,7 +63,7 @@ router.put("/:id", auth, async (req, res) => {
       SET nombre = $1,
           correo = $2,
           activo = $3
-      WHERE id = $4 AND rol = 'Conductor'
+      WHERE id = $4 AND rol = 'conductor'
       `,
       [nombre, correo, activo ? true : false, req.params.id]
     );
@@ -89,7 +89,7 @@ router.put("/:id/password", auth, async (req, res) => {
       `
       UPDATE usuarios
       SET password_hash = $1
-      WHERE id = $2 AND rol = 'Conductor'
+      WHERE id = $2 AND rol = 'conductor'
       `,
       [hash, req.params.id]
     );
@@ -107,7 +107,7 @@ router.delete("/:id", auth, async (req, res) => {
     await db.query(
       `
       DELETE FROM usuarios
-      WHERE id = $1 AND rol = 'Conductor'
+      WHERE id = $1 AND rol = 'conductor'
       `,
       [req.params.id]
     );

@@ -5,13 +5,17 @@ const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
-// ============================================================
-// =============== OBTENER TODOS LOS VEHÍCULOS =================
-// ============================================================
+/* ============================================================
+   =============== LISTAR TODOS LOS VEHÍCULOS ==================
+   ============================================================ */
 router.get("/", auth, async (_req, res) => {
   try {
     const result = await db.query(`
-      SELECT id, numero_interno, patente, kilometro 
+      SELECT 
+        id, 
+        numero_interno, 
+        patente, 
+        kilometro 
       FROM vehiculos 
       ORDER BY id DESC
     `);
@@ -23,9 +27,9 @@ router.get("/", auth, async (_req, res) => {
   }
 });
 
-// ============================================================
-// ==================== CREAR VEHÍCULO =========================
-// ============================================================
+/* ============================================================
+   ====================== CREAR VEHÍCULO =======================
+   ============================================================ */
 router.post("/", auth, async (req, res) => {
   const { numero_interno, patente, kilometro } = req.body || {};
 
@@ -34,6 +38,24 @@ router.post("/", auth, async (req, res) => {
   }
 
   try {
+    // Verificar duplicado (patente o número interno)
+    const exists = await db.query(
+      `
+      SELECT id 
+      FROM vehiculos 
+      WHERE numero_interno = $1 OR patente = $2
+      LIMIT 1
+      `,
+      [numero_interno.trim(), patente.trim().toUpperCase()]
+    );
+
+    if (exists.rows.length) {
+      return res.status(409).json({
+        message: "Ya existe un vehículo con ese número interno o patente",
+      });
+    }
+
+    // Crear
     const result = await db.query(
       `
       INSERT INTO vehiculos (numero_interno, patente, kilometro)
@@ -50,17 +72,43 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-// ============================================================
-// ==================== ACTUALIZAR VEHÍCULO ====================
-// ============================================================
+/* ============================================================
+   ===================== ACTUALIZAR VEHÍCULO ===================
+   ============================================================ */
 router.put("/:id", auth, async (req, res) => {
   const { numero_interno, patente, kilometro } = req.body || {};
+  const id = req.params.id;
 
   if (!numero_interno?.trim() || !patente?.trim()) {
     return res.status(400).json({ message: "Campos obligatorios faltantes" });
   }
 
   try {
+    // Verificar si existe
+    const exists = await db.query(`SELECT id FROM vehiculos WHERE id=$1`, [id]);
+    if (!exists.rows.length) {
+      return res.status(404).json({ message: "Vehículo no encontrado" });
+    }
+
+    // Validar duplicado (excepto el mismo ID)
+    const duplicado = await db.query(
+      `
+      SELECT id 
+      FROM vehiculos 
+      WHERE (numero_interno = $1 OR patente = $2)
+      AND id <> $3
+      LIMIT 1
+      `,
+      [numero_interno.trim(), patente.trim().toUpperCase(), id]
+    );
+
+    if (duplicado.rows.length) {
+      return res.status(409).json({
+        message: "Otro vehículo ya usa ese número interno o patente",
+      });
+    }
+
+    // Actualizar
     const result = await db.query(
       `
       UPDATE vehiculos
@@ -71,13 +119,9 @@ router.put("/:id", auth, async (req, res) => {
         numero_interno.trim(),
         patente.trim().toUpperCase(),
         kilometro || 0,
-        req.params.id,
+        id,
       ]
     );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: "Vehículo no encontrado" });
-    }
 
     res.json({ ok: true, updated: result.rowCount });
   } catch (err) {
@@ -86,21 +130,34 @@ router.put("/:id", auth, async (req, res) => {
   }
 });
 
-// ============================================================
-// =============== ELIMINAR VEHÍCULO ===========================
-// ============================================================
+/* ============================================================
+   ====================== ELIMINAR VEHÍCULO ====================
+   ============================================================ */
 router.delete("/:id", auth, async (req, res) => {
   const vehiculoId = req.params.id;
 
   try {
-    // Verificar si está en uso
-    const check = await db.query(
-      "SELECT COUNT(*)::int AS total FROM inspecciones WHERE vehiculo_id = $1",
+    // Validar si existe
+    const exists = await db.query(
+      `SELECT id FROM vehiculos WHERE id=$1`,
       [vehiculoId]
     );
 
-    const enUso = check.rows[0]?.total > 0;
-    if (enUso) {
+    if (!exists.rows.length) {
+      return res.status(404).json({ message: "Vehículo no encontrado" });
+    }
+
+    // Verificar si está en uso (relación con inspecciones)
+    const check = await db.query(
+      `
+      SELECT COUNT(*)::int AS total 
+      FROM inspecciones 
+      WHERE vehiculo_id = $1
+      `,
+      [vehiculoId]
+    );
+
+    if (check.rows[0].total > 0) {
       return res.status(400).json({
         message:
           "No se puede eliminar este vehículo porque está asociado a inspecciones.",
@@ -108,14 +165,7 @@ router.delete("/:id", auth, async (req, res) => {
     }
 
     // Eliminar
-    const result = await db.query(
-      "DELETE FROM vehiculos WHERE id=$1",
-      [vehiculoId]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: "Vehículo no encontrado" });
-    }
+    await db.query(`DELETE FROM vehiculos WHERE id=$1`, [vehiculoId]);
 
     res.json({ ok: true, message: "Vehículo eliminado correctamente" });
   } catch (err) {

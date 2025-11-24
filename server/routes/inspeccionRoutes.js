@@ -1,7 +1,7 @@
 // routes/inspeccionRoutes.js
 const express = require("express");
-const { db } = require("../config/db");
-const { auth } = require("../middleware/auth");
+const db = require("../config/db");          // FIX 1
+const auth = require("../middleware/auth");  // FIX 2
 
 const router = express.Router();
 
@@ -41,7 +41,7 @@ router.get("/", auth, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Error GET /inspecciones:", err);
-    res.status(500).json({ message: "Error al obtener inspecciones" });
+    return res.status(500).json({ message: "Error al obtener inspecciones" });
   }
 });
 
@@ -94,7 +94,6 @@ router.post("/", auth, async (req, res) => {
       }
     }
 
-    // Insert batch (uno por uno porque PG no usa VALUES ? para arrays)
     for (const item of itemRows) {
       await client.query(
         `
@@ -121,7 +120,7 @@ router.post("/", auth, async (req, res) => {
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Error POST /inspecciones:", err);
-    res.status(500).json({ message: "Error al crear inspección" });
+    return res.status(500).json({ message: "Error al crear inspección" });
   } finally {
     client.release();
   }
@@ -135,16 +134,8 @@ router.get("/:id/items", auth, async (req, res) => {
     const isConductor = user.rol?.toLowerCase() === "conductor";
 
     const checkQuery = isConductor
-      ? `
-        SELECT usuario_id 
-        FROM inspecciones 
-        WHERE id = $1 AND usuario_id = $2
-        `
-      : `
-        SELECT usuario_id 
-        FROM inspecciones 
-        WHERE id = $1
-        `;
+      ? `SELECT usuario_id FROM inspecciones WHERE id = $1 AND usuario_id = $2`
+      : `SELECT usuario_id FROM inspecciones WHERE id = $1`;
 
     const checkParams = isConductor ? [id, user.id] : [id];
     const check = await db.query(checkQuery, checkParams);
@@ -168,7 +159,7 @@ router.get("/:id/items", auth, async (req, res) => {
 
   } catch (err) {
     console.error("❌ Error GET /inspecciones/:id/items:", err);
-    res.status(500).json({ message: "Error al obtener ítems" });
+    return res.status(500).json({ message: "Error al obtener ítems" });
   }
 });
 

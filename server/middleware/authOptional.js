@@ -1,22 +1,39 @@
+// middleware/authOptional.js
 const jwt = require("jsonwebtoken");
 
-exports.authOptional = (req, res, next) => {
+function authOptional(req, res, next) {
   let token = null;
 
-  // Token por query
-  if (req.query.token) token = req.query.token;
+  // Token por query (?token=xxx)
+  if (req.query?.token) {
+    token = req.query.token;
+  }
 
   // Token estándar por headers
   if (!token && req.headers.authorization) {
-    token = req.headers.authorization.split(" ")[1];
+    const hdr = req.headers.authorization;
+    if (hdr.startsWith("Bearer ")) {
+      token = hdr.slice(7);
+    }
   }
 
-  if (!token) return next(); // permite PDF público
+  // Si no hay token, deja pasar (PDF público)
+  if (!token) return next();
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-  } catch {}
 
-  next();
-};
+    // validación mínima
+    req.user = {
+      id: decoded.id || null,
+      username: decoded.username || null,
+      rol: decoded.rol || null,
+    };
+  } catch (err) {
+    console.warn("authOptional: token inválido, se permite acceso público");
+  }
+
+  return next();
+}
+
+module.exports = { authOptional };

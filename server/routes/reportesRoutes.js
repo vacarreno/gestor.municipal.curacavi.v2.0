@@ -8,13 +8,16 @@ const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
+/* ============================================================
+   ============= PDF DE INSPECCIÓN VEHICULAR ==================
+   ============================================================ */
 router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
   try {
-    // =======================================================
-    // 🔹 CONSULTA PRINCIPAL (POSTGRESQL)
-    // =======================================================
+    /* =============================== */
+    /*          CONSULTA PG           */
+    /* =============================== */
     const result = await db.query(
       `
       SELECT 
@@ -33,16 +36,20 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
       [id]
     );
 
-    if (result.rows.length === 0)
+    if (!result.rows.length) {
       return res.status(404).send("Inspección no encontrada");
+    }
 
     const data = result.rows[0];
 
-    // =======================================================
-    // 🔹 HEADERS
-    // =======================================================
+    /* =============================== */
+    /*            PDF HEADER           */
+    /* =============================== */
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename=inspeccion_${id}.pdf`);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=inspeccion_${id}.pdf`
+    );
 
     const doc = new PDFDocument({
       size: "A4",
@@ -54,9 +61,9 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
 
     const logoPath = path.join(__dirname, "../public/logo-curacavi.png");
 
-    // =======================================================
-    // 🔹 ENCABEZADO
-    // =======================================================
+    /* =============================== */
+    /*        ENCABEZADO GLOBAL        */
+    /* =============================== */
     const drawHeader = () => {
       const L = doc.page.margins.left;
       const usableWidth =
@@ -86,10 +93,10 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
         .moveTo(L, 65)
         .lineTo(L + usableWidth, 65)
         .strokeColor("#003366")
-        .lineWidth(1)
         .stroke();
 
       doc.moveDown(1);
+
       doc
         .font("Helvetica-Bold")
         .fontSize(14)
@@ -102,8 +109,7 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
         .fillColor("#666")
         .text("Ilustre Municipalidad de Curacaví", L, doc.y + 2);
 
-      doc.moveDown(0.5);
-      doc.font("Helvetica").fillColor("#000").fontSize(10);
+      doc.moveDown(1);
     };
 
     drawHeader();
@@ -111,43 +117,57 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
 
     const L = () => doc.page.margins.left;
 
-    // =======================================================
-    // 🔹 DATOS GENERALES DE INSPECCIÓN
-    // =======================================================
-    doc.moveDown(1.5);
-    doc.font("Helvetica-Bold").fillColor("#003366").text("Datos de la Inspección", L());
+    /* =============================== */
+    /*     DATOS GENERALES INSPECCIÓN  */
+    /* =============================== */
+    doc.font("Helvetica-Bold")
+      .fillColor("#003366")
+      .text("Datos de la Inspección", L());
     doc.fillColor("#000").fontSize(10);
 
     doc.text(`ID Inspección: ${id}`);
     doc.text(`Vehículo: ${data.vehiculo}`);
-    doc.text(`Fecha: ${new Date(data.created_at).toLocaleString("es-CL")}`);
-    doc.moveDown(1);
+    doc.text(
+      `Fecha: ${new Date(data.created_at).toLocaleString("es-CL")}`
+    );
 
-    // =======================================================
-    // 🔹 DATOS DEL CONDUCTOR
-    // =======================================================
-    doc.font("Helvetica-Bold").fillColor("#003366").text("Datos del Conductor", L());
+    doc.moveDown(1.2);
+
+    /* =============================== */
+    /*         DATOS CONDUCTOR         */
+    /* =============================== */
+    doc.font("Helvetica-Bold")
+      .fillColor("#003366")
+      .text("Datos del Conductor", L());
     doc.fillColor("#000").fontSize(10);
 
     doc.text(`Conductor: ${data.conductor}`);
     if (data.rut_conductor) doc.text(`RUT: ${data.rut_conductor}`);
-    if (data.direccion_conductor) doc.text(`Dirección: ${data.direccion_conductor}`);
-    if (data.telefono_conductor) doc.text(`Teléfono: ${data.telefono_conductor}`);
-    if (data.licencia_conductor) doc.text(`Clase Licencia: ${data.licencia_conductor}`);
+    if (data.direccion_conductor)
+      doc.text(`Dirección: ${data.direccion_conductor}`);
+    if (data.telefono_conductor)
+      doc.text(`Teléfono: ${data.telefono_conductor}`);
+    if (data.licencia_conductor)
+      doc.text(`Clase Licencia: ${data.licencia_conductor}`);
 
-    doc.moveDown(1);
+    doc.moveDown(1.3);
 
-    // =======================================================
-    // 🔹 OBSERVACIONES
-    // =======================================================
-    doc.font("Helvetica-Bold").fillColor("#003366").text("Observaciones Generales", L());
-    doc.fillColor("#000").moveDown(0.5);
-    doc.text(data.observacion || "Sin observaciones registradas.");
-    doc.moveDown(2);
+    /* =============================== */
+    /*         OBSERVACIONES           */
+    /* =============================== */
+    doc.font("Helvetica-Bold")
+      .fillColor("#003366")
+      .text("Observaciones Generales", L());
 
-    // =======================================================
-    // 🔹 FOTO
-    // =======================================================
+    doc.font("Helvetica")
+      .fillColor("#000")
+      .text(data.observacion || "Sin observaciones registradas.");
+
+    doc.moveDown(1.5);
+
+    /* =============================== */
+    /*              FOTO               */
+    /* =============================== */
     if (data.foto) {
       try {
         const base64Data = data.foto.replace(/^data:image\/\w+;base64,/, "");
@@ -156,25 +176,22 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
         const tempPath = path.join("/tmp", `foto_${id}.jpg`);
         await fs.writeFile(tempPath, buffer);
 
-        doc.font("Helvetica-Bold").fillColor("#003366").text("Evidencia Fotográfica", L());
-        const imgWidth = 250;
-        const usableWidth =
-          doc.page.width - doc.page.margins.left - doc.page.margins.right;
+        doc.font("Helvetica-Bold")
+          .fillColor("#003366")
+          .text("Evidencia Fotográfica", L());
 
-        const x = doc.page.margins.left + (usableWidth - imgWidth) / 2;
+        doc.image(tempPath, L(), doc.y, { width: 260 });
 
-        doc.image(tempPath, x, doc.y, { width: imgWidth });
         await fs.unlink(tempPath);
-
-        doc.moveDown(3);
+        doc.moveDown(2);
       } catch (err) {
         console.error("Error procesando imagen:", err);
       }
     }
 
-    // =======================================================
-    // 🔹 ÍTEMS INSPECCIONADOS (PG)
-    // =======================================================
+    /* =============================== */
+    /*    ÍTEMS INSPECCIONADOS (PG)    */
+    /* =============================== */
     const itemsResult = await db.query(
       `
       SELECT item_key, existe, estado, obs
@@ -183,21 +200,19 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
       `,
       [id]
     );
-
     const items = itemsResult.rows;
 
-    // ≡ aquí tu lista base ≡
     const baseItems = [
       "Luces de estacionamiento", "Luces bajas", "Luces altas",
       "Luz de freno (incluye tercera luz)", "Luz de marcha atrás",
-      "Luz de viraje derecho", "Luz de viraje izquierdo", "Luz de emergencia",
-      "Luz de patente", "Baliza", "Freno de mano", "Freno de pedal",
-      "Freno otros", "Neumático delantero derecho",
-      "Neumático delantero izquierdo", "Neumático trasero derecho",
-      "Neumático trasero izquierdo", "Neumático de repuesto",
-      "Neumáticos otros", "Aceite de motor", "Agua del radiador",
-      "Líquido de freno", "Correas", "Agua de batería", "Extintor",
-      "Botiquín", "Gata", "Llave de ruedas", "Triángulos",
+      "Luz de viraje derecho", "Luz de viraje izquierdo",
+      "Luz de emergencia", "Luz de patente", "Baliza",
+      "Freno de mano", "Freno de pedal", "Freno otros",
+      "Neumático delantero derecho", "Neumático delantero izquierdo",
+      "Neumático trasero derecho", "Neumático trasero izquierdo",
+      "Neumático de repuesto", "Neumáticos otros", "Aceite de motor",
+      "Agua del radiador", "Líquido de freno", "Correas", "Agua de batería",
+      "Extintor", "Botiquín", "Gata", "Llave de ruedas", "Triángulos",
       "Chaleco reflectante", "Limpia parabrisas", "Herramientas",
       "Cinturón de seguridad", "Espejos laterales", "Espejo interior",
       "Radiotransmisor", "Bocina de retroceso", "Antena",
@@ -208,42 +223,49 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
     ];
 
     const merged = baseItems.map((b) => {
-      const f = items.find((i) => i.item_key === b);
+      const found = items.find((i) => i.item_key === b);
       return {
         item_key: b,
-        existe: f?.existe || "SI",
-        estado: f?.estado || "Bueno",
-        obs: f?.obs || "",
+        existe: found?.existe || "SI",
+        estado: found?.estado || "Bueno",
+        obs: found?.obs || "",
       };
     });
 
-    // =======================================================
-    // 🔹 TABLA
-    // =======================================================
-    doc.moveDown(10);
-    doc.font("Helvetica-Bold").fillColor("#003366").text("Ítems Inspeccionados", L());
-    doc.moveDown(0.5).fillColor("#000");
+    /* =============================== */
+    /*            TABLA                */
+    /* =============================== */
+    doc.font("Helvetica-Bold")
+      .fillColor("#003366")
+      .text("Ítems Inspeccionados", L());
+
+    doc.moveDown(0.5).font("Helvetica").fillColor("#000").fontSize(9);
 
     const startX = L();
     let y = doc.y;
+
     const colWidths = [180, 60, 80, 150];
     const headers = ["Ítem", "Existe", "Estado", "Observaciones"];
     const rowHeight = 18;
 
-    // Header tabla
-    doc
-      .rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
-      .fillAndStroke("#003366", "#003366");
+    const drawTableHeader = () => {
+      doc.rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
+        .fillAndStroke("#003366", "#003366");
 
-    doc.fillColor("#FFF").font("Helvetica-Bold").fontSize(10);
-    let x = startX;
-    headers.forEach((h, i) => {
-      doc.text(h, x + 5, y + 4, { width: colWidths[i] - 10 });
-      x += colWidths[i];
-    });
+      doc.fillColor("#FFF").font("Helvetica-Bold").fontSize(10);
 
-    y += rowHeight;
-    doc.font("Helvetica").fontSize(9).fillColor("#000");
+      let x = startX;
+      headers.forEach((h, i) => {
+        doc.text(h, x + 5, y + 4, { width: colWidths[i] });
+        x += colWidths[i];
+      });
+
+      y += rowHeight;
+    };
+
+    drawTableHeader();
+
+    doc.font("Helvetica").fillColor("#000").fontSize(9);
 
     for (const [index, it] of merged.entries()) {
       if (y > doc.page.height - 120) {
@@ -251,38 +273,27 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
         drawHeader();
 
         y = doc.y + 20;
-
-        doc.rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
-          .fillAndStroke("#003366", "#003366");
-
-        doc.fillColor("#FFF").font("Helvetica-Bold").fontSize(10);
-        let xh = startX;
-
-        headers.forEach((h, i) => {
-          doc.text(h, xh + 5, y + 4, { width: colWidths[i] - 10 });
-          xh += colWidths[i];
-        });
-
-        y += rowHeight;
-        doc.font("Helvetica").fontSize(9).fillColor("#000");
+        drawTableHeader();
+        doc.font("Helvetica").fillColor("#000").fontSize(9);
       }
 
-      const fillColor = index % 2 === 0 ? "#F9F9F9" : "#FFFFFF";
-      doc
-        .rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
-        .fillAndStroke(fillColor, "#CCCCCC");
+      const bg = index % 2 === 0 ? "#F5F5F5" : "#FFFFFF";
 
-      x = startX;
+      doc.rect(startX, y, colWidths.reduce((a, b) => a + b), rowHeight)
+        .fillAndStroke(bg, "#CCCCCC");
+
+      let x = startX;
 
       doc.fillColor("#000").text(it.item_key, x + 5, y + 4, {
-        width: colWidths[0] - 10,
+        width: colWidths[0] - 5,
       });
 
       x += colWidths[0];
       doc.text(it.existe, x + 5, y + 4);
 
       x += colWidths[1];
-      const color = it.estado === "Bueno" ? "#008000" : "#CC0000";
+      const color =
+        it.estado === "Bueno" ? "#0A7F00" : "#A80000";
       doc.fillColor(color).text(it.estado, x + 5, y + 4);
 
       x += colWidths[2];
@@ -291,49 +302,37 @@ router.get("/inspeccion/:id/pdf", auth, async (req, res) => {
       y += rowHeight;
     }
 
-    // =======================================================
-    // 🔹 FIRMAS
-    // =======================================================
-    const firmaY = y + 56;
+    /* =============================== */
+    /*            FIRMAS               */
+    /* =============================== */
+    doc.moveDown(3);
 
-    if (firmaY > doc.page.height - 120) {
-      doc.addPage();
-      drawHeader();
-      doc.moveDown(3);
-    }
-
-    const baseY = doc.y < firmaY ? firmaY : doc.y;
-
-    doc.text("_____________________________", L(), baseY);
-    doc.text(`Conductor: ${data.conductor}`, L() + 15, baseY + 12);
+    doc.text("_____________________________", L());
+    doc.text(`Conductor: ${data.conductor}`, L() + 15);
 
     if (data.rut_conductor)
-      doc.text(`RUT: ${data.rut_conductor}`, L() + 15, baseY + 24);
+      doc.text(`RUT: ${data.rut_conductor}`, L() + 15, doc.y + 2);
 
-    doc.text("_____________________________", L() + 260, baseY);
-    doc.text("Supervisor:", L() + 270, baseY + 12);
+    doc.moveDown(2);
 
-    // =======================================================
-    // 🔹 PAGINACIÓN (segunda pasada)
-    // =======================================================
+    doc.text("_____________________________", L() + 260);
+    doc.text("Supervisor:", L() + 270);
+
+    /* =============================== */
+    /*          PAGINACIÓN             */
+    /* =============================== */
     const range = doc.bufferedPageRange();
     const totalPages = range.count;
 
     for (let i = range.start; i < range.start + totalPages; i++) {
       doc.switchToPage(i);
-
-      const Lh = doc.page.margins.left;
-      const usableWidth =
-        doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      const left = doc.page.margins.left;
 
       doc
         .font("Helvetica")
         .fontSize(9)
         .fillColor("#666")
-        .text(`Página ${i + 1} de ${totalPages}`, Lh, 100, {
-          align: "left",
-          width: usableWidth - 15,
-        });
+        .text(`Página ${i + 1} de ${totalPages}`, left, 100);
     }
 
     doc.end();
