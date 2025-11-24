@@ -26,4 +26,4 @@ db.connect()
   });
 
 // EXPORTACIÓN CORRECTA
-module.exports = db;
+module.exports = { db };
