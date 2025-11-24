@@ -4,7 +4,8 @@ const path = require("path");
 const fs = require("fs/promises");
 const PDFDocument = require("pdfkit");
 const { db } = require("../config/db");
-const { auth } = require("../middleware/auth");
+const auth = require("../middleware/auth");
+
 
 const router = express.Router();
 

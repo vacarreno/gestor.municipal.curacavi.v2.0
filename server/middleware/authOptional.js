@@ -9,7 +9,7 @@ function authOptional(req, res, next) {
     token = req.query.token;
   }
 
-  // Token estándar por headers
+  // Token por Header Authorization
   if (!token && req.headers.authorization) {
     const hdr = req.headers.authorization;
     if (hdr.startsWith("Bearer ")) {
@@ -17,23 +17,22 @@ function authOptional(req, res, next) {
     }
   }
 
-  // Si no hay token, deja pasar (PDF público)
+  // Si no hay token → acceso libre (para PDFs públicos)
   if (!token) return next();
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // validación mínima
     req.user = {
       id: decoded.id || null,
       username: decoded.username || null,
       rol: decoded.rol || null,
     };
   } catch (err) {
-    console.warn("authOptional: token inválido, se permite acceso público");
+    console.warn("authOptional: token inválido — acceso público permitido");
   }
 
   return next();
 }
 
-module.exports = { authOptional };
+module.exports = authOptional;
