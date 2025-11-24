@@ -3,10 +3,12 @@ const express = require("express");
 const router = express.Router();
 
 const auth = require("../middleware/auth");
+
 const {
   getVecinos,
   updateSaldo,
   regenerarQR,
+  toggleActivo,            // ← IMPORTACIÓN CORRECTA
 } = require("../controllers/billeteraController");
 
 const ROLES = ["admin", "adminbilletera"];
@@ -23,5 +25,8 @@ function allowRoles(roles) {
 router.get("/vecinos", auth, allowRoles(ROLES), getVecinos);
 router.put("/vecinos/:id/saldo", auth, allowRoles(ROLES), updateSaldo);
 router.post("/vecinos/:id/qr", auth, allowRoles(ROLES), regenerarQR);
+router.put("/vecinos/:id/activo", auth, allowRoles(ROLES), toggleActivo);
 
+// ← EXPORTACIÓN CORRECTA
 module.exports = router;
+

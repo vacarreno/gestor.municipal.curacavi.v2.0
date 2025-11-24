@@ -34,6 +34,31 @@ async function getVecinos(req, res) {
   }
 }
 
+async function toggleActivo(req, res) {
+  try {
+    const { id } = req.params;
+    const { activo } = req.body;
+
+    const sql = `
+      UPDATE usuarios 
+      SET activo = $1
+      WHERE id = $2 AND LOWER(rol) = 'vecino'
+      RETURNING id, nombre, activo;
+    `;
+
+    const result = await db.query(sql, [activo, id]);
+
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: "Vecino no encontrado" });
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("❌ Error toggleActivo:", err);
+    res.status(500).json({ error: "Error al actualizar estado" });
+  }
+}
+
+
 // =============================================
 // ACTUALIZAR SALDO
 // =============================================

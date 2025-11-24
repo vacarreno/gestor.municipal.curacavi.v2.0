@@ -11,3 +11,7 @@ export const updateSaldo = (id, monto) =>
 
 export const regenerarQR = (id) =>
   axios.post(`${API}/billetera/vecinos/${id}/qr`);
+
+export const toggleActivo = (id, estado) =>
+  axios.put(`${API}/billetera/vecinos/${id}/activo`, { activo: !estado });
+

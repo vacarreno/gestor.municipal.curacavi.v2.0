@@ -47,58 +47,78 @@ export default function BilleteraPage() {
         <div className="table-responsive">
           <table className="table table-hover table-bordered align-middle">
             <thead className="table-dark">
-              <tr>
-                <th>Foto</th>
-                <th>Nombre</th>
-                <th>RUT</th>
-                <th>Teléfono</th>
-                <th>Saldo Actual</th>
-                <th>QR</th>
-                <th className="text-center">Acciones</th>
-              </tr>
-            </thead>
+  <tr>
+    <th>Foto</th>
+    <th>Nombre</th>
+    <th>RUT</th>
+    <th>Teléfono</th>
+    <th>Correo</th>
+    <th>Saldo</th>
+    <th>QR</th>
+    <th>Estado</th>
+    <th className="text-center">Acciones</th>
+  </tr>
+</thead>
             <tbody>
-              {vecinos.map((v) => (
-                <tr key={v.id}>
-                  <td>
-                    <img
-                      src={v.foto}
-                      alt=""
-                      className="vecino-foto"
-                    />
-                  </td>
-                  <td>{v.nombre}</td>
-                  <td>{v.rut}</td>
-                  <td>{v.telefono}</td>
-                  <td className="fw-bold text-success">${v.saldo_actual}</td>
+  {vecinos.map((v) => (
+    <tr key={v.id} className={!v.activo ? "table-danger" : ""}>
+      <td>
+        <img src={v.foto} alt="" className="vecino-foto" />
+      </td>
 
-                  {/* === CORRECCIÓN: v.qr_url no existe === */}
-                  <td>
-                    {v.qr_token ? (
-                      <span className="text-success fw-bold">{v.qr_token}</span>
-                    ) : (
-                      <span className="text-muted">No generado</span>
-                    )}
-                  </td>
+      <td>{v.nombre}</td>
+      <td>{v.rut}</td>
+      <td>{v.telefono}</td>
+      <td>{v.correo}</td>
 
-                  <td className="text-center">
-                    <button
-                      className="btn btn-sm btn-primary me-2"
-                      onClick={() => abrirEditor(v)}
-                    >
-                      Editar
-                    </button>
+      <td className="fw-bold text-success">${v.saldo_actual}</td>
 
-                    <button
-                      className="btn btn-sm btn-warning"
-                      onClick={() => handleRegenerarQR(v.id)}
-                    >
-                      Regenerar QR
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+      <td>
+        {v.qr_url ? (
+          <img
+            src={v.qr_url}
+            alt="QR"
+            className="qr-thumb"
+            onClick={() => setSelectedQR(v.qr_url)}
+          />
+        ) : (
+          <span className="text-muted">No generado</span>
+        )}
+      </td>
+
+      <td>
+        {v.activo ? (
+          <span className="badge bg-success">Activo</span>
+        ) : (
+          <span className="badge bg-secondary">Inactivo</span>
+        )}
+      </td>
+
+      <td className="text-center">
+        <button
+          className="btn btn-sm btn-primary me-2"
+          onClick={() => abrirEditor(v)}
+        >
+          Editar
+        </button>
+
+        <button
+          className="btn btn-sm btn-warning me-2"
+          onClick={() => handleRegenerarQR(v.id)}
+        >
+          QR
+        </button>
+
+        <button
+          className={`btn btn-sm ${v.activo ? "btn-danger" : "btn-success"}`}
+          onClick={() => toggleActivo(v.id, v.activo)}
+        >
+          {v.activo ? "Desactivar" : "Activar"}
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
           </table>
         </div>
       )}
