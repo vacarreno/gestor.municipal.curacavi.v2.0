@@ -1,7 +1,7 @@
 // routes/usuarioRoutes.js
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const { db } = require("../config/db");     // FIX: tu config exporta el Pool directo
+const db = require("../config/db");  // ✔️ FIX CORRECTO
 const auth = require("../middleware/auth");
 
 const router = express.Router();
@@ -71,9 +71,9 @@ router.post("/", auth, async (req, res) => {
   }
 
   try {
-    // Validación de duplicado
+    // Validar duplicado
     const exists = await db.query(
-      `SELECT id FROM usuarios WHERE username = $1 LIMIT 1`,
+      `SELECT id FROM usuarios WHERE username=$1 LIMIT 1`,
       [username.trim()]
     );
 
@@ -89,7 +89,7 @@ router.post("/", auth, async (req, res) => {
         username, nombre, correo, rut, direccion, telefono, licencia,
         departamento, rol, password_hash, activo
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,true)
       RETURNING id
       `,
       [
@@ -103,7 +103,6 @@ router.post("/", auth, async (req, res) => {
         departamento || "Municipalidad",
         rol || "Usuario",
         hash,
-        true // PostgreSQL requiere booleano estricto
       ]
     );
 
@@ -163,7 +162,7 @@ router.put("/:id", auth, async (req, res) => {
         licencia || "",
         departamento || "Municipalidad",
         rol || "Usuario",
-        activo === true, // boolean real para PostgreSQL
+        Boolean(activo),   // ✔️ cast explícito
         req.params.id,
       ]
     );
