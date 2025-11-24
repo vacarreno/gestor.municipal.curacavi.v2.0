@@ -3,30 +3,44 @@ const express = require("express");
 const router = express.Router();
 
 const auth = require("../middleware/auth");
-
 const {
   getVecinos,
   updateSaldo,
   regenerarQR,
-  toggleActivo,            // ← IMPORTACIÓN CORRECTA
 } = require("../controllers/billeteraController");
 
-const ROLES = ["admin", "adminbilletera"];
+// ✅ Middleware para validar roles permitidos
+const ROLES_PERMITIDOS = ["admin", "adminbilletera"];
 
 function allowRoles(roles) {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.rol)) {
-      return res.status(403).json({ message: "No autorizado" });
+    if (!req.user || !roles.includes(req.user.rol.toLowerCase())) {
+      return res.status(403).json({ message: "No autorizado para esta acción" });
     }
     next();
   };
 }
 
-router.get("/vecinos", auth, allowRoles(ROLES), getVecinos);
-router.put("/vecinos/:id/saldo", auth, allowRoles(ROLES), updateSaldo);
-router.post("/vecinos/:id/qr", auth, allowRoles(ROLES), regenerarQR);
-router.put("/vecinos/:id/activo", auth, allowRoles(ROLES), toggleActivo);
+// ✅ RUTAS CON AUTENTICACIÓN Y VALIDACIÓN DE ROL
+router.get(
+  "/vecinos", 
+  auth, 
+  allowRoles(ROLES_PERMITIDOS), 
+  getVecinos
+);
 
-// ← EXPORTACIÓN CORRECTA
+router.put(
+  "/vecinos/:id/saldo", 
+  auth, 
+  allowRoles(ROLES_PERMITIDOS), 
+  updateSaldo
+);
+
+router.post(
+  "/vecinos/:id/qr", 
+  auth, 
+  allowRoles(ROLES_PERMITIDOS), 
+  regenerarQR
+);
+
 module.exports = router;
-
